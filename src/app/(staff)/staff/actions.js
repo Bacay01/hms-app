@@ -85,7 +85,7 @@ export async function updateStaffRole(prevState, formData) {
   });
 
   revalidatePath("/staff");
-  return {};
+  return { saved: true };
 }
 
 export async function toggleStaffActive(prevState, formData) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { updateStaffRole, toggleStaffActive, resetStaffPassword } from "./actions";
 import { formatRole } from "@/lib/nav";
 import TempPassword from "@/components/staff/TempPassword";
@@ -20,6 +20,12 @@ export default function StaffRow({ staff, roles, isSelf }) {
   const [resetState, resetAction, resetPending] = useActionState(resetStaffPassword, {});
   const error = roleState?.error || activeState?.error || resetState?.error;
 
+  // Controlled dropdown, so React's automatic form reset can't snap it back
+  const [roleId, setRoleId] = useState(staff.role.id);
+  useEffect(() => setRoleId(staff.role.id), [staff.role.id]);
+
+  const saved = roleState?.saved && roleId === staff.role.id;
+
   return (
     <>
       <tr className={staff.isActive ? "" : "opacity-50"}>
@@ -38,8 +44,9 @@ export default function StaffRow({ staff, roles, isSelf }) {
             <input type="hidden" name="userId" value={staff.id} />
             <select
               name="roleId"
-              defaultValue={staff.role.id}
-              disabled={isSelf || rolePending}
+              value={roleId}
+              onChange={(e) => setRoleId(e.target.value)}
+              disabled={isSelf}
               className="rounded-lg border border-white/15 bg-black/30 px-2 py-1.5 text-xs text-white disabled:opacity-60"
             >
               {roles.map((r) => (
@@ -49,8 +56,8 @@ export default function StaffRow({ staff, roles, isSelf }) {
               ))}
             </select>
             {!isSelf && (
-              <button disabled={rolePending} className={smallButton}>
-                {rolePending ? "Saving…" : "Save"}
+              <button disabled={rolePending || roleId === staff.role.id} className={smallButton}>
+                {rolePending ? "Saving…" : saved ? "Saved" : "Save"}
               </button>
             )}
           </form>
