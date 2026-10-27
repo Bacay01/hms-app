@@ -1,16 +1,11 @@
 import { cookies } from "next/headers";
-import { encrypt, decrypt, SESSION_COOKIE, SESSION_HOURS } from "@/lib/jwt";
+import { encrypt, decrypt, cookieOptions, SESSION_COOKIE } from "@/lib/jwt";
+import { SESSION_HOURS } from "@/lib/config";
 
 export async function createSession(data) {
-  const token = await encrypt(data);
+  const token = await encrypt({ ...data, lastActive: Date.now() });
   const store = await cookies();
-  store.set(SESSION_COOKIE, token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: SESSION_HOURS * 60 * 60,
-  });
+  store.set(SESSION_COOKIE, token, cookieOptions(SESSION_HOURS * 60 * 60));
 }
 
 export async function getSession() {

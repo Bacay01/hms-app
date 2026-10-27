@@ -1,6 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
+import { Suspense } from "react";
 import LoginForm from "./LoginForm";
+import IdleNotice from "./IdleNotice";
 import { SITE } from "@/lib/site";
 
 export const metadata = {
@@ -42,7 +44,12 @@ export default function LoginPage() {
           </p>
         </div>
 
-        <LoginForm />
+        <div className="w-full max-w-md">
+          <Suspense fallback={null}>
+            <IdleNotice />
+          </Suspense>
+          <LoginForm />
+        </div>
       </div>
     </main>
   );

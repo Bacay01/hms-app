@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import StaffShell from "@/components/staff/StaffShell";
+import IdleWatcher from "@/components/staff/IdleWatcher";
 import { requireSession } from "@/lib/auth";
 
 export default function StaffLayout({ children }) {
@@ -17,5 +18,10 @@ async function Shell({ children }) {
     role: session.role,
     permissions: session.permissions ?? [],
   };
-  return <StaffShell user={user}>{children}</StaffShell>;
+  return (
+    <>
+      <IdleWatcher />
+      <StaffShell user={user}>{children}</StaffShell>
+    </>
+  );
 }
