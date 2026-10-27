@@ -179,3 +179,9 @@ model AuditLog {
   @@index([userId])
   @@index([createdAt])
 }
+
+// Atomic counters (e.g. the yearly hospital-number sequence)
+model Counter {
+  key   String @id
+  value Int    @default(0)
+}

@@ -28,3 +28,17 @@ body {
     animation: none;
   }
 }
+
+@media print {
+  @page {
+    margin: 12mm;
+  }
+  body {
+    background: #fff;
+  }
+  .patient-card,
+  .patient-card * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

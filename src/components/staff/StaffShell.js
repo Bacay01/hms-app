@@ -19,13 +19,13 @@ export default function StaffShell({ user, children }) {
     .toUpperCase();
 
   return (
-    <div className="flex h-dvh bg-[#0a0a0a] text-white">
+    <div className="flex h-dvh bg-[#0a0a0a] text-white print:block print:h-auto print:bg-white">
       {open && (
         <div className="fixed inset-0 z-30 bg-black/60 lg:hidden" onClick={() => setOpen(false)} />
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-white/10 bg-[#0f0f0f] transition-transform lg:static lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-40 flex w-64 print:hidden flex-col border-r border-white/10 bg-[#0f0f0f] transition-transform lg:static lg:translate-x-0 ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -71,7 +71,7 @@ export default function StaffShell({ user, children }) {
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-16 shrink-0 items-center justify-between border-b border-white/10 bg-[#0a0a0a]/80 px-4 backdrop-blur-xl lg:px-8">
+        <header className="print:hidden flex h-16 shrink-0 items-center justify-between border-b border-white/10 bg-[#0a0a0a]/80 px-4 backdrop-blur-xl lg:px-8">
           <button
             type="button"
             onClick={() => setOpen(true)}
@@ -97,7 +97,7 @@ export default function StaffShell({ user, children }) {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-4 lg:p-8">{children}</main>
+        <main className="flex-1 overflow-y-auto p-4 lg:p-8 print:overflow-visible print:p-0">{children}</main>
       </div>
     </div>
   );
