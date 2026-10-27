@@ -1,0 +1,181 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─────────────────────────────
+// Enums
+// ─────────────────────────────
+
+enum Sex {
+  MALE
+  FEMALE
+}
+
+enum EncounterType {
+  OUTPATIENT
+  EMERGENCY
+  INPATIENT
+}
+
+enum EncounterStatus {
+  WAITING
+  WITH_NURSE
+  WITH_DOCTOR
+  COMPLETED
+  CANCELLED
+}
+
+// ─────────────────────────────
+// Roles & permissions (RBAC)
+// ─────────────────────────────
+
+model Role {
+  id          String           @id @default(cuid())
+  name        String           @unique // e.g. "ADMIN", "DOCTOR"
+  description String?
+  users       User[]
+  permissions RolePermission[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}
+
+model Permission {
+  id          String           @id @default(cuid())
+  key         String           @unique // e.g. "patients.read"
+  description String?
+  roles       RolePermission[]
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+}
+
+// ─────────────────────────────
+// Staff
+// ─────────────────────────────
+
+model User {
+  id           String    @id @default(cuid())
+  firstName    String
+  lastName     String
+  email        String    @unique
+  phone        String?
+  passwordHash String
+  isActive     Boolean   @default(true) // deactivate, never delete
+  lastLoginAt  DateTime?
+
+  roleId String
+  role   Role   @relation(fields: [roleId], references: [id])
+
+  registeredPatients Patient[]   @relation("PatientRegisteredBy")
+  doctorEncounters   Encounter[] @relation("EncounterDoctor")
+  createdEncounters  Encounter[] @relation("EncounterCreatedBy")
+  auditLogs          AuditLog[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([roleId])
+}
+
+// ─────────────────────────────
+// Patients
+// ─────────────────────────────
+
+model Patient {
+  id             String   @id @default(cuid())
+  hospitalNumber String   @unique // e.g. HMS-2026-000123
+  firstName      String
+  lastName       String
+  otherNames     String?
+  dateOfBirth    DateTime
+  sex            Sex
+  phone          String
+  email          String?
+  address        String?
+
+  nextOfKinName     String?
+  nextOfKinPhone    String?
+  nextOfKinRelation String?
+
+  bloodGroup String?
+  genotype   String?
+  allergies  String?
+
+  consentGiven Boolean   @default(false) // NDPA 2023 consent
+  consentAt    DateTime?
+
+  registeredById String
+  registeredBy   User   @relation("PatientRegisteredBy", fields: [registeredById], references: [id])
+
+  encounters Encounter[]
+
+  isActive  Boolean   @default(true)
+  deletedAt DateTime? // soft delete only
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([lastName, firstName])
+  @@index([phone])
+}
+
+// ─────────────────────────────
+// Encounters (one visit)
+// ─────────────────────────────
+
+model Encounter {
+  id     String          @id @default(cuid())
+  type   EncounterType   @default(OUTPATIENT)
+  status EncounterStatus @default(WAITING)
+  reason String?
+
+  patientId String
+  patient   Patient @relation(fields: [patientId], references: [id])
+
+  doctorId String?
+  doctor   User?   @relation("EncounterDoctor", fields: [doctorId], references: [id])
+
+  createdById String
+  createdBy   User   @relation("EncounterCreatedBy", fields: [createdById], references: [id])
+
+  startedAt DateTime  @default(now())
+  endedAt   DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([patientId])
+  @@index([doctorId])
+  @@index([status])
+}
+
+// ─────────────────────────────
+// Audit log
+// ─────────────────────────────
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  action    String   // e.g. "patient.view", "patient.update"
+  entity    String   // e.g. "Patient"
+  entityId  String?
+  details   Json?
+  ipAddress String?
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([entity, entityId])
+  @@index([userId])
+  @@index([createdAt])
+}
