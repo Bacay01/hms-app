@@ -5,7 +5,7 @@ import { requirePermission } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { audit } from "@/lib/audit";
 import { can } from "@/lib/nav";
-import { ageFrom, formatDate, formatDateTime, formatSex, fullName } from "@/lib/patients";
+import { ageFrom, formatDate, formatDateTime, formatSex, fullName, hasKnownAllergies } from "@/lib/patients";
 
 export default function PatientPage({ params }) {
   return (
@@ -84,7 +84,7 @@ async function PatientProfile({ params }) {
         </div>
       </div>
 
-      {patient.allergies && (
+      {hasKnownAllergies(patient.allergies) && (
         <div className="mt-6 rounded-2xl border border-accent/40 bg-accent/15 px-5 py-3 text-sm">
           <span className="font-semibold text-white">Allergies: </span>
           <span className="text-red-100">{patient.allergies}</span>
@@ -97,6 +97,7 @@ async function PatientProfile({ params }) {
           <Detail label="Sex" value={formatSex(patient.sex)} />
           <Detail label="Blood group" value={patient.bloodGroup} />
           <Detail label="Genotype" value={patient.genotype} />
+          <Detail label="Allergies" value={hasKnownAllergies(patient.allergies) ? patient.allergies : "None known"} />
         </Card>
 
         <Card title="Contact">

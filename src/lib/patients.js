@@ -88,3 +88,11 @@ export function formatSex(sex) {
 export function fullName(p) {
   return [p.firstName, p.otherNames, p.lastName].filter(Boolean).join(" ");
 }
+
+// "None", "Nil", "Nothing", "N/A", "NKDA" etc. mean no known allergies
+const NO_ALLERGY_RE = /^(none|nil|nothing|no|n\/?a|nkda|nka|no known( drug)? allerg(y|ies))\.?$/i;
+
+export function hasKnownAllergies(allergies) {
+  const value = String(allergies ?? "").trim();
+  return value.length > 0 && !NO_ALLERGY_RE.test(value);
+}

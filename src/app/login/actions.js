@@ -1,12 +1,13 @@
 "use server";
 
 import bcrypt from "bcryptjs";
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { audit } from "@/lib/audit";
 import { createSession, deleteSession } from "@/lib/session";
 
 const INVALID = "Invalid email or password.";
+const DB_DOWN = "Can't reach the database right now. Check your connection and try again.";
 
 export async function login(prevState, formData) {
   const email = String(formData.get("email") || "").trim().toLowerCase();
@@ -16,12 +17,18 @@ export async function login(prevState, formData) {
     return { error: "Enter your email and password." };
   }
 
-  const user = await prisma.user.findUnique({
-    where: { email },
-    include: {
-      role: { include: { permissions: { include: { permission: true } } } },
-    },
-  });
+  let user;
+  try {
+    user = await prisma.user.findUnique({
+      where: { email },
+      include: {
+        role: { include: { permissions: { include: { permission: true } } } },
+      },
+    });
+  } catch (error) {
+    console.error("Login database error:", error);
+    return { error: DB_DOWN };
+  }
 
   const valid =
     user && user.isActive && (await bcrypt.compare(password, user.passwordHash));
@@ -37,24 +44,16 @@ export async function login(prevState, formData) {
     permissions: user.role.permissions.map((rp) => rp.permission.key),
   });
 
-  const ip =
-    (await headers()).get("x-forwarded-for")?.split(",")[0]?.trim() || null;
-
-  await prisma.$transaction([
-    prisma.user.update({
+  try {
+    await prisma.user.update({
       where: { id: user.id },
       data: { lastLoginAt: new Date() },
-    }),
-    prisma.auditLog.create({
-      data: {
-        action: "auth.login",
-        entity: "User",
-        entityId: user.id,
-        userId: user.id,
-        ipAddress: ip,
-      },
-    }),
-  ]);
+    });
+    await audit({ action: "auth.login", entity: "User", entityId: user.id, userId: user.id });
+  } catch (error) {
+    // Don't block login if only the bookkeeping fails
+    console.error("Login bookkeeping error:", error);
+  }
 
   redirect("/dashboard");
 }
