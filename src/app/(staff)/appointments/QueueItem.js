@@ -29,7 +29,7 @@ const dangerButton =
   "rounded-lg border border-accent/40 px-2.5 py-1 text-xs text-red-200 hover:bg-accent/15 disabled:opacity-50";
 const smallSelect = "rounded-lg border border-white/15 bg-black/40 px-2 py-1 text-xs text-white";
 
-export default function QueueItem({ item, doctors }) {
+export default function QueueItem({ item, doctors, busyWith }) {
   const [moveState, moveAction, moving] = useActionState(moveEncounter, {});
   const [priorityState, priorityAction, savingPriority] = useActionState(setPriority, {});
   const [reassignState, reassignAction, reassigning] = useActionState(reassignEncounter, {});

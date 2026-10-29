@@ -76,35 +76,9 @@ export async function bookAppointment(prevState, formData) {
   if (!patient) return { error: "Patient not found." };
   if (!doctor) return { error: "Choose a doctor." };
 
-  // Must fall within the doctor's working hours (if a schedule is set)
-  if (doctor.schedules.length > 0) {
-    const day = localDayOfWeek(scheduledAt);
-    const time = localTime(scheduledAt);
-    const shift = doctor.schedules.find((s) => s.dayOfWeek === day);
-    if (!shift) return { error: `Dr ${doctor.lastName} doesn't work on ${DAY_NAMES[day]}s.` };
-    if (time < shift.startTime || time >= shift.endTime) {
-      return { error: `Dr ${doctor.lastName} works ${shift.startTime}–${shift.endTime} on ${DAY_NAMES[day]}s.` };
-    }
-  }
-
-  // No overlapping slots for the same doctor
-  const slotMs = SLOT_MINUTES * 60 * 1000;
-  const clash = await prisma.appointment.findFirst({
-    where: {
-      doctorId,
-      status: { in: ["BOOKED", "CHECKED_IN"] },
-      scheduledAt: {
-        gt: new Date(scheduledAt.getTime() - slotMs),
-        lt: new Date(scheduledAt.getTime() + slotMs),
-      },
-    },
-    select: { scheduledAt: true },
-  });
-  if (clash) {
-    return {
-      error: `Dr ${doctor.lastName} already has an appointment at ${localTime(clash.scheduledAt)}. Pick a time at least ${SLOT_MINUTES} minutes apart.`,
-    };
-  }
+  // Leave, working hours and clashes (binary search) — shared with rescheduling
+  const slot = await validateSlot({ doctor, scheduledAt });
+  if (slot.error) return { error: slot.error };
 
   const appointment = await prisma.appointment.create({
     data: {

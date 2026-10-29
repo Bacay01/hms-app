@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState, useEffect, useState } from "react";
 import { updateStaffRole, toggleStaffActive, resetStaffPassword } from "./actions";
 import { formatRole } from "@/lib/nav";
@@ -79,6 +80,11 @@ export default function StaffRow({ staff, roles, isSelf }) {
 
         <td className="px-4 py-3">
           <div className="flex justify-end gap-2">
+            {staff.role.name === "DOCTOR" && (
+              <Link href={"/staff/" + staff.id + "/schedule"} className={smallButton}>
+                Schedule
+              </Link>
+            )}
             <form action={resetAction}>
               <input type="hidden" name="userId" value={staff.id} />
               <button disabled={resetPending} className={smallButton}>

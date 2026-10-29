@@ -19,6 +19,7 @@ import QueueColumn from "./QueueColumn";
 import AppointmentActions from "./AppointmentActions";
 import AutoRefresh from "./AutoRefresh";
 import UndoBar from "./UndoBar";
+import { doctorIdsOnLeave } from "@/lib/leave";
 import CloseDayButton from "./CloseDayButton";
 import { getUndoableAction } from "@/lib/undo";
 
@@ -98,7 +99,9 @@ async function Board({ searchParams }) {
   const byDoctor = groupQueueByDoctor(encounters);
 
   const now = Date.now();
-  const isOnDuty = (d) => d.schedules.some((s) => s.dayOfWeek === dow);
+  // Everyone on leave on this day, as a Set → O(1) checks
+  const onLeave = await doctorIdsOnLeave(date);
+  const isOnDuty = (d) => !onLeave.has(d.id) && d.schedules.some((s) => s.dayOfWeek === dow);
 
   // On duty today, or already has patients today (Map.has is O(1))
   const onDuty = doctors.filter((d) => isOnDuty(d) || byDoctor.has(d.id));

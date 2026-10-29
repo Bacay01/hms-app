@@ -110,6 +110,7 @@ model User {
   doctorAppointments  Appointment[]    @relation("AppointmentDoctor")
   createdAppointments Appointment[]    @relation("AppointmentCreatedBy")
   schedules           DoctorSchedule[]
+  leaves           DoctorLeave[]
   auditLogs           AuditLog[]
 
   createdAt DateTime @default(now())
@@ -296,4 +297,18 @@ model AuditLog {
 model Counter {
   key   String @id
   value Int    @default(0)
+}
+
+// Doctor leave / days off. Dates are "YYYY-MM-DD" in Lagos time, inclusive.
+model DoctorLeave {
+  id          String   @id @default(cuid())
+  doctorId    String
+  doctor      User     @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  startDate   String
+  endDate     String
+  reason      String?
+  createdById String?
+  createdAt   DateTime @default(now())
+
+  @@index([doctorId, startDate, endDate])
 }

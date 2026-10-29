@@ -7,6 +7,8 @@ import QueueItem from "./QueueItem";
 export default function QueueColumn({ column, canCallNext, doctors }) {
   const [state, action, pending] = useActionState(callNext, {});
   const otherDoctors = doctors.filter((d) => d.id !== column.id);
+  // Who is in the consulting room right now (if anyone)
+  const busyWith = column.active.find((e) => e.status === "WITH_DOCTOR")?.queueNumber ?? null;
 
   return (
     <section className="flex flex-col rounded-2xl border border-white/10 bg-white/[0.04] p-4">
@@ -47,7 +49,7 @@ export default function QueueColumn({ column, canCallNext, doctors }) {
             No patients in the queue
           </li>
         ) : (
-          column.active.map((item) => <QueueItem key={item.id} item={item} doctors={otherDoctors} />)
+          column.active.map((item) => <QueueItem key={item.id} item={item} doctors={otherDoctors} busyWith={busyWith} />)
         )}
       </ul>
 

@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { findOverlap, nextFreeSlot } from "@/lib/dsa/intervals";
+import { leaveOn } from "@/lib/leave";
 import {
   DAY_NAMES,
   SLOT_MINUTES,
@@ -19,10 +20,16 @@ export function findDoctor(id) {
   });
 }
 
-// Checks working hours, then clashes using binary search over the doctor's day.
+// Checks leave, working hours, then clashes using binary search over the doctor's day.
 // Returns { error } — error is null when the slot is free.
 export async function validateSlot({ doctor, scheduledAt, excludeAppointmentId }) {
   const dateStr = localDate(scheduledAt);
+
+  const leave = await leaveOn(doctor.id, dateStr);
+  if (leave) {
+    return { error: `Dr ${doctor.lastName} is on leave from ${leave.startDate} to ${leave.endDate}.` };
+  }
+
   const { start: dayStart, end: dayEnd } = dayRange(dateStr);
   let latestStart = dayEnd.getTime() - SLOT_MS;
 
