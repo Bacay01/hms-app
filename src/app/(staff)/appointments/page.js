@@ -19,6 +19,7 @@ import QueueColumn from "./QueueColumn";
 import AppointmentActions from "./AppointmentActions";
 import AutoRefresh from "./AutoRefresh";
 import UndoBar from "./UndoBar";
+import CloseDayButton from "./CloseDayButton";
 import { getUndoableAction } from "@/lib/undo";
 
 export default function AppointmentsPage({ searchParams }) {
@@ -196,6 +197,7 @@ async function Board({ searchParams }) {
         <Link href={`/appointments?date=${shiftDate(date, 1)}`} className={navButton}>
           Next day →
         </Link>
+        {isToday && can(perms, "appointments.manage") && <CloseDayButton />}
       </div>
 
       {isToday && <UndoBar action={undoable} />}
@@ -272,7 +274,8 @@ async function Board({ searchParams }) {
                         appointmentId={a.id}
                         patientName={fullName(a.patient)}
                         canCheckIn={isToday && a.status === "BOOKED" && can(perms, "encounters.create")}
-                        canCancel={a.status === "BOOKED" && can(perms, "appointments.manage")}
+                        canManage={a.status === "BOOKED" && can(perms, "appointments.manage")}
+                        isPast={a.scheduledAt.getTime() < now}
                       />
                     </td>
                   </tr>

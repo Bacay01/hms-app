@@ -1,18 +1,27 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState } from "react";
 import { cancelAppointment, checkIn } from "./actions";
+import { markNoShow } from "./manage-actions";
 
-export default function AppointmentActions({ appointmentId, patientName, canCheckIn, canCancel }) {
+const smallButton =
+  "rounded-lg border border-white/15 px-2.5 py-1.5 text-xs text-white/80 hover:bg-white/10 disabled:opacity-60";
+const dangerButton =
+  "rounded-lg border border-accent/40 px-2.5 py-1.5 text-xs text-red-200 hover:bg-accent/15 disabled:opacity-60";
+
+// canManage: booked + user can manage appointments. isPast: the appointment time has passed.
+export default function AppointmentActions({ appointmentId, patientName, canCheckIn, canManage, isPast }) {
   const [checkInState, checkInAction, checkingIn] = useActionState(checkIn, {});
   const [cancelState, cancelAction, cancelling] = useActionState(cancelAppointment, {});
+  const [noShowState, noShowAction, markingNoShow] = useActionState(markNoShow, {});
 
-  if (!canCheckIn && !canCancel) return null;
-  const error = checkInState?.error || cancelState?.error;
+  if (!canCheckIn && !canManage) return null;
+  const error = checkInState?.error || cancelState?.error || noShowState?.error;
 
   return (
     <div className="flex flex-col items-end gap-1">
-      <div className="flex justify-end gap-2">
+      <div className="flex flex-wrap justify-end gap-2">
         {canCheckIn && (
           <form action={checkInAction}>
             <input type="hidden" name="appointmentId" value={appointmentId} />
@@ -24,7 +33,26 @@ export default function AppointmentActions({ appointmentId, patientName, canChec
             </button>
           </form>
         )}
-        {canCancel && (
+        {canManage && (
+          <Link href={`/appointments/${appointmentId}/reschedule`} className={smallButton}>
+            Reschedule
+          </Link>
+        )}
+        {canManage && isPast && (
+          <form action={noShowAction}>
+            <input type="hidden" name="appointmentId" value={appointmentId} />
+            <button
+              disabled={markingNoShow}
+              onClick={(e) => {
+                if (!confirm(`Mark ${patientName} as a no-show?`)) e.preventDefault();
+              }}
+              className={smallButton}
+            >
+              {markingNoShow ? "…" : "No-show"}
+            </button>
+          </form>
+        )}
+        {canManage && (
           <form action={cancelAction}>
             <input type="hidden" name="appointmentId" value={appointmentId} />
             <button
@@ -32,7 +60,7 @@ export default function AppointmentActions({ appointmentId, patientName, canChec
               onClick={(e) => {
                 if (!confirm(`Cancel ${patientName}'s appointment?`)) e.preventDefault();
               }}
-              className="rounded-lg border border-accent/40 px-2.5 py-1.5 text-xs text-red-200 hover:bg-accent/15 disabled:opacity-60"
+              className={dangerButton}
             >
               {cancelling ? "…" : "Cancel"}
             </button>
