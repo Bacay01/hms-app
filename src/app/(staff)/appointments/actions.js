@@ -1,5 +1,8 @@
 "use server";
 
+   import { TriageQueue } from "@/lib/dsa/TriageQueue";
+   import { getUndoableAction } from "@/lib/undo";
+
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
@@ -445,5 +448,46 @@ export async function reassignEncounter(prevState, formData) {
   });
 
   refresh(encounter.patientId);
+  return {};
+}
+
+// Undo the current user's last queue move (Stack replayed from the audit log)
+export async function undoLastAction(prevState, formData) {
+  const session = await requireSession();
+
+  const undoable = await getUndoableAction(session.userId);
+  if (!undoable) return { error: "Nothing to undo. Actions can be undone for 5 minutes." };
+
+  // Clear the timestamp the original move set
+  const clear =
+    undoable.to === "WITH_NURSE"
+      ? { nurseAt: null }
+      : undoable.to === "WITH_DOCTOR"
+        ? { doctorAt: null }
+        : { endedAt: null };
+
+  // Only if the patient is still where this user left them
+  const updated = await prisma.encounter.updateMany({
+    where: { id: undoable.encounterId, status: undoable.to },
+    data: { status: undoable.from, ...clear },
+  });
+  if (updated.count === 0) return { error: "Someone else has updated this patient since, so it can't be undone." };
+
+  if (undoable.to === "COMPLETED") {
+    await prisma.appointment.updateMany({
+      where: { encounterId: undoable.encounterId, status: "COMPLETED" },
+      data: { status: "CHECKED_IN" },
+    });
+  }
+
+  await audit({
+    action: "encounter.status_undo",
+    entity: "Encounter",
+    entityId: undoable.encounterId,
+    userId: session.userId,
+    details: { undoOf: undoable.auditId, from: undoable.to, to: undoable.from },
+  });
+
+  refresh();
   return {};
 }

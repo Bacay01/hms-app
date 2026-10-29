@@ -18,6 +18,8 @@ import { dayRange, localDate, localDayOfWeek, localTime, shiftDate } from "@/lib
 import QueueColumn from "./QueueColumn";
 import AppointmentActions from "./AppointmentActions";
 import AutoRefresh from "./AutoRefresh";
+import UndoBar from "./UndoBar";
+import { getUndoableAction } from "@/lib/undo";
 
 export default function AppointmentsPage({ searchParams }) {
   return (
@@ -87,6 +89,9 @@ async function Board({ searchParams }) {
       include: { department: { select: { name: true } }, schedules: true },
     }),
   ]);
+
+  // The user's last move that can still be undone (Stack replayed from the audit log)
+  const undoable = isToday ? await getUndoableAction(session.userId) : null;
 
   // One pass: Map(doctorId → queue), each doctor's patients ordered by the heap
   const byDoctor = groupQueueByDoctor(encounters);
@@ -192,6 +197,8 @@ async function Board({ searchParams }) {
           Next day →
         </Link>
       </div>
+
+      {isToday && <UndoBar action={undoable} />}
 
       {isToday && (
         <section className="mt-8">
