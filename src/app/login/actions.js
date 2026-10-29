@@ -1,10 +1,12 @@
 "use server";
 
 import bcrypt from "bcryptjs";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { audit } from "@/lib/audit";
 import { createSession, deleteSession } from "@/lib/session";
+import { checkLoginAllowed, clearLoginAttempts } from "@/lib/loginLimiter";
 
 const INVALID = "Invalid email or password.";
 const DB_DOWN = "Can't reach the database right now. Check your connection and try again.";
@@ -15,6 +17,14 @@ export async function login(prevState, formData) {
 
   if (!email || !password) {
     return { error: "Enter your email and password." };
+  }
+
+  // Sliding-window rate limiter: checked BEFORE the password, so attackers can't keep guessing
+  const ip = (await headers()).get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
+  const gate = checkLoginAllowed(email, ip);
+  if (!gate.allowed) {
+    const m = gate.retryAfterMinutes;
+    return { error: `Too many sign-in attempts. Try again in ${m} minute${m === 1 ? "" : "s"}.` };
   }
 
   let user;
@@ -34,8 +44,17 @@ export async function login(prevState, formData) {
     user && user.isActive && (await bcrypt.compare(password, user.passwordHash));
 
   if (!valid) {
+    if (user) {
+      try {
+        await audit({ action: "auth.login_failed", entity: "User", entityId: user.id });
+      } catch {
+        // never block the response because logging failed
+      }
+    }
     return { error: INVALID };
   }
+
+  clearLoginAttempts(email);
 
   await createSession({
     userId: user.id,
