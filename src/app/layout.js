@@ -1,12 +1,6 @@
-import { Plus_Jakarta_Sans } from "next/font/google";
+import "@fontsource-variable/plus-jakarta-sans"; // font files come from npm — no Google download
 import "./globals.css";
 import { SITE } from "@/lib/site";
-
-const jakarta = Plus_Jakarta_Sans({
-  subsets: ["latin"],
-  variable: "--font-jakarta",
-  display: "swap",
-});
 
 export const metadata = {
   title: `${SITE.name} — Hospital Management System`,
@@ -15,7 +9,7 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" className={jakarta.variable}>
+    <html lang="en">
       <body className="font-sans antialiased">{children}</body>
     </html>
   );
