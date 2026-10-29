@@ -96,3 +96,20 @@ export function hasKnownAllergies(allergies) {
   const value = String(allergies ?? "").trim();
   return value.length > 0 && !NO_ALLERGY_RE.test(value);
 }
+
+// Prisma "where" for searching patients: every word must match somewhere
+export function patientSearchWhere(query) {
+  const terms = String(query ?? "").trim().split(/\s+/).filter(Boolean).slice(0, 4);
+  return {
+    deletedAt: null,
+    AND: terms.map((t) => ({
+      OR: [
+        { hospitalNumber: { contains: t, mode: "insensitive" } },
+        { firstName: { contains: t, mode: "insensitive" } },
+        { lastName: { contains: t, mode: "insensitive" } },
+        { otherNames: { contains: t, mode: "insensitive" } },
+        { phone: { contains: t } },
+      ],
+    })),
+  };
+}

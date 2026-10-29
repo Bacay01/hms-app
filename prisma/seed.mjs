@@ -96,19 +96,36 @@ const ROLES = {
 };
 
 // ─────────────────────────────
-// Test users (one per role)
+// Test users
 // ─────────────────────────────
 const TEST_PASSWORD = "Password123!";
 
 const USERS = [
-  { firstName: "Ade",     lastName: "Admin",      email: "admin@hms.test",      role: "ADMIN" },
-  { firstName: "Rita",    lastName: "Reception",  email: "reception@hms.test",  role: "RECEPTIONIST" },
-  { firstName: "Dayo",    lastName: "Doctor",     email: "doctor@hms.test",     role: "DOCTOR" },
-  { firstName: "Ngozi",   lastName: "Nurse",      email: "nurse@hms.test",      role: "NURSE" },
-  { firstName: "Laide",   lastName: "Lab",        email: "lab@hms.test",        role: "LAB_SCIENTIST" },
-  { firstName: "Femi",    lastName: "Pharmacy",   email: "pharmacy@hms.test",   role: "PHARMACIST" },
-  { firstName: "Chidi",   lastName: "Cashier",    email: "cashier@hms.test",    role: "CASHIER" },
-  { firstName: "Halima",  lastName: "Hmo",        email: "hmo@hms.test",        role: "HMO_OFFICER" },
+  { firstName: "Ade",    lastName: "Admin",     email: "admin@hms.test",     role: "ADMIN" },
+  { firstName: "Rita",   lastName: "Reception", email: "reception@hms.test", role: "RECEPTIONIST" },
+  { firstName: "Dayo",   lastName: "Doctor",    email: "doctor@hms.test",    role: "DOCTOR" },
+  { firstName: "Funmi",  lastName: "Adeyemi",   email: "paeds@hms.test",     role: "DOCTOR" },
+  { firstName: "Kunle",  lastName: "Okafor",    email: "obgyn@hms.test",     role: "DOCTOR" },
+  { firstName: "Ngozi",  lastName: "Nurse",     email: "nurse@hms.test",     role: "NURSE" },
+  { firstName: "Laide",  lastName: "Lab",       email: "lab@hms.test",       role: "LAB_SCIENTIST" },
+  { firstName: "Femi",   lastName: "Pharmacy",  email: "pharmacy@hms.test",  role: "PHARMACIST" },
+  { firstName: "Chidi",  lastName: "Cashier",   email: "cashier@hms.test",   role: "CASHIER" },
+  { firstName: "Halima", lastName: "Hmo",       email: "hmo@hms.test",       role: "HMO_OFFICER" },
+];
+
+// ─────────────────────────────
+// Departments, schedules, rooms (0 = Sunday ... 6 = Saturday)
+// ─────────────────────────────
+const DEPARTMENTS = [
+  { name: "General Outpatient", description: "Walk-ins, general consultations and follow-ups." },
+  { name: "Paediatrics", description: "Care for babies, children and teenagers." },
+  { name: "Obstetrics & Gynaecology", description: "Antenatal care, women's health and maternity." },
+];
+
+const DOCTOR_SETUP = [
+  { email: "doctor@hms.test", department: "General Outpatient", room: "Room 1", days: [1, 2, 3, 4, 5], start: "08:00", end: "16:00" },
+  { email: "paeds@hms.test", department: "Paediatrics", room: "Room 2", days: [1, 3, 5], start: "09:00", end: "15:00" },
+  { email: "obgyn@hms.test", department: "Obstetrics & Gynaecology", room: "Room 3", days: [2, 4, 6], start: "09:00", end: "14:00" },
 ];
 
 async function main() {
@@ -134,7 +151,6 @@ async function main() {
     });
     roleIdByName[name] = role.id;
 
-    // Reset this role's permissions so re-running the seed stays in sync
     await prisma.rolePermission.deleteMany({ where: { roleId: role.id } });
     await prisma.rolePermission.createMany({
       data: permissions.map((key) => ({ roleId: role.id, permissionId: permIdByKey[key] })),
@@ -157,7 +173,37 @@ async function main() {
     });
   }
 
-  console.log(`Done: ${Object.keys(PERMISSIONS).length} permissions, ${Object.keys(ROLES).length} roles, ${USERS.length} users.`);
+  console.log("Seeding departments, schedules and rooms...");
+  const deptIdByName = {};
+  for (const d of DEPARTMENTS) {
+    const dept = await prisma.department.upsert({
+      where: { name: d.name },
+      update: { description: d.description },
+      create: d,
+    });
+    deptIdByName[d.name] = dept.id;
+  }
+
+  for (const s of DOCTOR_SETUP) {
+    const doctor = await prisma.user.update({
+      where: { email: s.email },
+      data: { departmentId: deptIdByName[s.department], consultingRoom: s.room },
+    });
+    await prisma.doctorSchedule.deleteMany({ where: { doctorId: doctor.id } });
+    await prisma.doctorSchedule.createMany({
+      data: s.days.map((day) => ({
+        doctorId: doctor.id,
+        dayOfWeek: day,
+        startTime: s.start,
+        endTime: s.end,
+      })),
+    });
+  }
+
+  console.log(
+    `Done: ${Object.keys(PERMISSIONS).length} permissions, ${Object.keys(ROLES).length} roles, ` +
+      `${USERS.length} users, ${DEPARTMENTS.length} departments, ${DOCTOR_SETUP.length} doctors set up.`
+  );
   console.log(`Test password for every user: ${TEST_PASSWORD}`);
 }
 

@@ -5,7 +5,8 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/auth";
 import { audit } from "@/lib/audit";
-import { parsePatientForm, HOSPITAL_NUMBER_PREFIX } from "@/lib/patients";
+import { nextHospitalNumber } from "@/lib/numbers";
+import { parsePatientForm } from "@/lib/patients";
 
 export async function createPatient(prevState, formData) {
   const session = await requirePermission("patients.create");
@@ -34,16 +35,8 @@ export async function createPatient(prevState, formData) {
     };
   }
 
-  const year = new Date().getFullYear();
   const patient = await prisma.$transaction(async (tx) => {
-    // Atomic increment — two receptionists can never get the same number
-    const counter = await tx.counter.upsert({
-      where: { key: `patient-${year}` },
-      update: { value: { increment: 1 } },
-      create: { key: `patient-${year}`, value: 1 },
-    });
-    const hospitalNumber = `${HOSPITAL_NUMBER_PREFIX}-${year}-${String(counter.value).padStart(6, "0")}`;
-
+    const hospitalNumber = await nextHospitalNumber(tx);
     return tx.patient.create({
       data: {
         ...data,
@@ -79,15 +72,31 @@ export async function updatePatient(patientId, prevState, formData) {
   const normalise = (v) => (v instanceof Date ? v.toISOString() : String(v ?? ""));
   const changed = Object.keys(data).filter((key) => normalise(existing[key]) !== normalise(data[key]));
 
-  if (changed.length > 0) {
-    await prisma.patient.update({ where: { id: patientId }, data });
+  const consentNow = !existing.consentGiven && formData.get("consent") === "on";
+  const sameDob = existing.dateOfBirth.getTime() === data.dateOfBirth.getTime();
+
+  if (changed.length > 0 || existing.isProvisional || consentNow) {
+    await prisma.patient.update({
+      where: { id: patientId },
+      data: {
+        ...data,
+        isProvisional: false, // full details have now been entered
+        dobEstimated: existing.dobEstimated && sameDob,
+        ...(consentNow ? { consentGiven: true, consentAt: new Date() } : {}),
+      },
+    });
+
     // Field names only — never the values (health data)
     await audit({
       action: "patient.update",
       entity: "Patient",
       entityId: patientId,
       userId: session.userId,
-      details: { changed },
+      details: {
+        changed,
+        ...(existing.isProvisional ? { completedEmergencyRecord: true } : {}),
+        ...(consentNow ? { consentRecorded: true } : {}),
+      },
     });
   }
 

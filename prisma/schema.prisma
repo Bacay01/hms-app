@@ -27,7 +27,30 @@ enum EncounterStatus {
   WITH_NURSE
   WITH_DOCTOR
   COMPLETED
+  LEFT // left without being seen
+  CANCELLED // removed — added by mistake
+}
+
+// Order matters: Postgres sorts enums in this order, so EMERGENCY comes first
+enum Priority {
+  EMERGENCY
+  URGENT
+  NORMAL
+}
+
+enum VisitType {
+  NEW
+  FOLLOW_UP
+  REVIEW
+  ANTENATAL
+}
+
+enum AppointmentStatus {
+  BOOKED
+  CHECKED_IN
+  COMPLETED
   CANCELLED
+  NO_SHOW
 }
 
 // ─────────────────────────────
@@ -36,7 +59,7 @@ enum EncounterStatus {
 
 model Role {
   id          String           @id @default(cuid())
-  name        String           @unique // e.g. "ADMIN", "DOCTOR"
+  name        String           @unique
   description String?
   users       User[]
   permissions RolePermission[]
@@ -46,7 +69,7 @@ model Role {
 
 model Permission {
   id          String           @id @default(cuid())
-  key         String           @unique // e.g. "patients.read"
+  key         String           @unique
   description String?
   roles       RolePermission[]
 }
@@ -65,27 +88,63 @@ model RolePermission {
 // ─────────────────────────────
 
 model User {
-  id           String    @id @default(cuid())
-  firstName    String
-  lastName     String
-  email        String    @unique
-  phone        String?
-  passwordHash String
-  isActive     Boolean   @default(true) // deactivate, never delete
-  lastLoginAt  DateTime?
+  id             String    @id @default(cuid())
+  firstName      String
+  lastName       String
+  email          String    @unique
+  phone          String?
+  passwordHash   String
+  isActive       Boolean   @default(true)
+  lastLoginAt    DateTime?
+  consultingRoom String? // e.g. "Room 3" (doctors)
 
   roleId String
   role   Role   @relation(fields: [roleId], references: [id])
 
-  registeredPatients Patient[]   @relation("PatientRegisteredBy")
-  doctorEncounters   Encounter[] @relation("EncounterDoctor")
-  createdEncounters  Encounter[] @relation("EncounterCreatedBy")
-  auditLogs          AuditLog[]
+  departmentId String?
+  department   Department? @relation(fields: [departmentId], references: [id])
+
+  registeredPatients  Patient[]        @relation("PatientRegisteredBy")
+  doctorEncounters    Encounter[]      @relation("EncounterDoctor")
+  createdEncounters   Encounter[]      @relation("EncounterCreatedBy")
+  doctorAppointments  Appointment[]    @relation("AppointmentDoctor")
+  createdAppointments Appointment[]    @relation("AppointmentCreatedBy")
+  schedules           DoctorSchedule[]
+  auditLogs           AuditLog[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([roleId])
+  @@index([departmentId])
+}
+
+// ─────────────────────────────
+// Departments & doctor schedules
+// ─────────────────────────────
+
+model Department {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  description String?
+  isActive    Boolean @default(true)
+
+  doctors      User[]
+  appointments Appointment[]
+  encounters   Encounter[]
+
+  createdAt DateTime @default(now())
+}
+
+model DoctorSchedule {
+  id        String @id @default(cuid())
+  doctorId  String
+  doctor    User   @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  dayOfWeek Int // 0 = Sunday ... 6 = Saturday
+  startTime String // "09:00" (Lagos time)
+  endTime   String // "17:00" (Lagos time)
+
+  @@unique([doctorId, dayOfWeek])
 }
 
 // ─────────────────────────────
@@ -94,11 +153,12 @@ model User {
 
 model Patient {
   id             String   @id @default(cuid())
-  hospitalNumber String   @unique // e.g. HMS-2026-000123
+  hospitalNumber String   @unique
   firstName      String
   lastName       String
   otherNames     String?
   dateOfBirth    DateTime
+  dobEstimated   Boolean  @default(false) // emergency: age was guessed
   sex            Sex
   phone          String
   email          String?
@@ -112,16 +172,19 @@ model Patient {
   genotype   String?
   allergies  String?
 
-  consentGiven Boolean   @default(false) // NDPA 2023 consent
+  consentGiven Boolean   @default(false)
   consentAt    DateTime?
+
+  isProvisional Boolean @default(false) // emergency record, details still to complete
 
   registeredById String
   registeredBy   User   @relation("PatientRegisteredBy", fields: [registeredById], references: [id])
 
-  encounters Encounter[]
+  encounters   Encounter[]
+  appointments Appointment[]
 
   isActive  Boolean   @default(true)
-  deletedAt DateTime? // soft delete only
+  deletedAt DateTime?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
@@ -130,14 +193,53 @@ model Patient {
 }
 
 // ─────────────────────────────
+// Appointments
+// ─────────────────────────────
+
+model Appointment {
+  id           String            @id @default(cuid())
+  scheduledAt  DateTime
+  reason       String?
+  visitType    VisitType         @default(NEW)
+  status       AppointmentStatus @default(BOOKED)
+  cancelReason String?
+
+  patientId String
+  patient   Patient @relation(fields: [patientId], references: [id])
+
+  doctorId String
+  doctor   User   @relation("AppointmentDoctor", fields: [doctorId], references: [id])
+
+  departmentId String?
+  department   Department? @relation(fields: [departmentId], references: [id])
+
+  createdById String
+  createdBy   User   @relation("AppointmentCreatedBy", fields: [createdById], references: [id])
+
+  encounterId String?    @unique
+  encounter   Encounter? @relation(fields: [encounterId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([doctorId, scheduledAt])
+  @@index([patientId])
+  @@index([scheduledAt])
+}
+
+// ─────────────────────────────
 // Encounters (one visit)
 // ─────────────────────────────
 
 model Encounter {
-  id     String          @id @default(cuid())
-  type   EncounterType   @default(OUTPATIENT)
-  status EncounterStatus @default(WAITING)
-  reason String?
+  id             String          @id @default(cuid())
+  type           EncounterType   @default(OUTPATIENT)
+  status         EncounterStatus @default(WAITING)
+  priority       Priority        @default(NORMAL)
+  priorityReason String?
+  visitType      VisitType       @default(NEW)
+  reason         String?
+  queueNumber    Int?
 
   patientId String
   patient   Patient @relation(fields: [patientId], references: [id])
@@ -145,16 +247,26 @@ model Encounter {
   doctorId String?
   doctor   User?   @relation("EncounterDoctor", fields: [doctorId], references: [id])
 
+  departmentId String?
+  department   Department? @relation(fields: [departmentId], references: [id])
+
   createdById String
   createdBy   User   @relation("EncounterCreatedBy", fields: [createdById], references: [id])
 
+  appointment Appointment?
+
+  // Stage timestamps — startedAt is check-in
   startedAt DateTime  @default(now())
+  nurseAt   DateTime?
+  doctorAt  DateTime?
   endedAt   DateTime?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([patientId])
-  @@index([doctorId])
+  @@index([doctorId, status])
+  @@index([departmentId])
   @@index([status])
 }
 
@@ -163,9 +275,9 @@ model Encounter {
 // ─────────────────────────────
 
 model AuditLog {
-  id        String   @id @default(cuid())
-  action    String   // e.g. "patient.view", "patient.update"
-  entity    String   // e.g. "Patient"
+  id        String  @id @default(cuid())
+  action    String
+  entity    String
   entityId  String?
   details   Json?
   ipAddress String?
@@ -180,7 +292,7 @@ model AuditLog {
   @@index([createdAt])
 }
 
-// Atomic counters (e.g. the yearly hospital-number sequence)
+// Atomic counters (yearly hospital numbers, daily queue numbers)
 model Counter {
   key   String @id
   value Int    @default(0)

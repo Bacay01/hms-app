@@ -28,7 +28,16 @@ function Field({ label, required, wide, children }) {
   );
 }
 
-export default function PatientForm({ action, defaults = {}, submitLabel, cancelHref, today, isEdit = false }) {
+// isEdit: editing an existing patient. askConsent: they haven't consented yet (e.g. emergency record)
+export default function PatientForm({
+  action,
+  defaults = {},
+  submitLabel,
+  cancelHref,
+  today,
+  isEdit = false,
+  askConsent = false,
+}) {
   const [state, formAction, pending] = useActionState(action, {});
   const d = defaults;
 
@@ -123,13 +132,14 @@ export default function PatientForm({ action, defaults = {}, submitLabel, cancel
         </Field>
       </Section>
 
-      {!isEdit && (
+      {(!isEdit || askConsent) && (
         <label className="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-sm text-white/80">
-          <input name="consent" type="checkbox" required className="mt-0.5 size-4 accent-[#e5262a]" />
+          <input name="consent" type="checkbox" required={!isEdit} className="mt-0.5 size-4 accent-[#e5262a]" />
           <span>
-            The patient (or their guardian) consents to {""}
+            The patient (or their guardian) consents to{" "}
             <span className="font-medium text-white">their personal and medical information being stored</span> and
             used for their care, in line with the Nigeria Data Protection Act 2023.
+            {isEdit && <span className="block text-xs text-white/50">Tick once consent has been obtained.</span>}
           </span>
         </label>
       )}

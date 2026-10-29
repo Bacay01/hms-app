@@ -45,8 +45,15 @@ async function EditPatient({ params }) {
       <Link href={`/patients/${patient.id}`} className="text-sm text-white/60 hover:text-white">
         ← {fullName(patient)}
       </Link>
-      <h1 className="mt-2 text-3xl font-bold tracking-tight">Edit patient</h1>
+      <h1 className="mt-2 text-3xl font-bold tracking-tight">
+        {patient.isProvisional ? "Complete patient details" : "Edit patient"}
+      </h1>
       <p className="mt-1 font-mono text-sm text-white/60">{patient.hospitalNumber}</p>
+      {patient.dobEstimated && (
+        <p className="mt-2 text-sm text-white/60">
+          The date of birth is currently an estimate. Replace it with the real date if known.
+        </p>
+      )}
       <div className="mt-6">
         <PatientForm
           action={updatePatient.bind(null, patient.id)}
@@ -55,6 +62,7 @@ async function EditPatient({ params }) {
           cancelHref={`/patients/${patient.id}`}
           today={today}
           isEdit
+          askConsent={!patient.consentGiven}
         />
       </div>
     </div>
