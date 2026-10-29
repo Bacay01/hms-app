@@ -111,6 +111,7 @@ model User {
   createdAppointments Appointment[]    @relation("AppointmentCreatedBy")
   schedules           DoctorSchedule[]
   leaves           DoctorLeave[]
+  recordedVitals           Vitals[] @relation("VitalsRecordedBy")
   auditLogs           AuditLog[]
 
   createdAt DateTime @default(now())
@@ -177,6 +178,7 @@ model Patient {
   consentAt    DateTime?
 
   isProvisional Boolean @default(false) // emergency record, details still to complete
+  vitals        Vitals[]
 
   registeredById String
   registeredBy   User   @relation("PatientRegisteredBy", fields: [registeredById], references: [id])
@@ -255,6 +257,7 @@ model Encounter {
   createdBy   User   @relation("EncounterCreatedBy", fields: [createdById], references: [id])
 
   appointment Appointment?
+  vitals      Vitals[]
 
   // Stage timestamps — startedAt is check-in
   startedAt DateTime  @default(now())
@@ -311,4 +314,31 @@ model DoctorLeave {
   createdAt   DateTime @default(now())
 
   @@index([doctorId, startDate, endDate])
+}
+
+// One set of vital signs. Every field is optional — record what was measured.
+model Vitals {
+  id              String   @id @default(cuid())
+  encounterId     String
+  encounter       Encounter @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientId       String
+  patient         Patient  @relation(fields: [patientId], references: [id])
+  recordedById    String
+  recordedBy      User     @relation("VitalsRecordedBy", fields: [recordedById], references: [id])
+
+  systolic        Int?     // mmHg
+  diastolic       Int?     // mmHg
+  temperature     Float?   // °C
+  pulse           Int?     // beats per minute
+  respiratoryRate Int?     // breaths per minute
+  spo2            Int?     // %
+  weightKg        Float?
+  heightCm        Float?
+  glucose         Float?   // random blood glucose, mmol/L
+  notes           String?
+
+  createdAt       DateTime @default(now())
+
+  @@index([patientId, createdAt])
+  @@index([encounterId])
 }
