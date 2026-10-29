@@ -197,6 +197,9 @@ async function Board({ searchParams }) {
         <Link href={`/appointments?date=${shiftDate(date, 1)}`} className={navButton}>
           Next day →
         </Link>
+        <Link href="/display" target="_blank" className={navButton}>
+          TV screen ↗
+        </Link>
         {isToday && can(perms, "appointments.manage") && <CloseDayButton />}
       </div>
 
