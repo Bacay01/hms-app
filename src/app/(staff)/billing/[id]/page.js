@@ -3,9 +3,14 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requirePermission } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { can } from "@/lib/nav";
 import { syncEncounterBill } from "@/lib/billing";
 import { formatNaira } from "@/lib/money";
 import { formatDateTime, fullName } from "@/lib/patients";
+import { recordPayment } from "../payment-actions";
+import PaymentForm from "./PaymentForm";
+
+const METHOD_LABELS = { CASH: "Cash", POS: "POS", TRANSFER: "Transfer", PAYSTACK: "Paystack" };
 
 export default function BillPage({ params }) {
   return (
@@ -16,7 +21,7 @@ export default function BillPage({ params }) {
 }
 
 async function BillDetail({ params }) {
-  await requirePermission("billing.read");
+  const session = await requirePermission("billing.read");
   const { id } = await params;
 
   const found = await prisma.bill.findUnique({ where: { id }, select: { encounterId: true } });
@@ -29,9 +34,13 @@ async function BillDetail({ params }) {
       patient: { select: { firstName: true, lastName: true, otherNames: true, hospitalNumber: true, phone: true } },
       encounter: { select: { startedAt: true, doctor: { select: { lastName: true } } } },
       items: { orderBy: { createdAt: "asc" } },
+      payments: { orderBy: { createdAt: "asc" }, include: { receivedBy: { select: { firstName: true, lastName: true } } } },
     },
   });
+
   const balance = bill.totalKobo - bill.paidKobo;
+  const unpriced = bill.items.filter((i) => i.status === "ACTIVE" && i.priceMissing).length;
+  const canPay = can(session.permissions, "billing.payments");
 
   return (
     <div className="max-w-4xl">
@@ -87,12 +96,48 @@ async function BillDetail({ params }) {
           <span>{formatNaira(bill.paidKobo)}</span>
         </div>
         <div className="flex justify-between border-t border-white/10 pt-1.5 text-lg font-bold">
-          <span>Balance</span>
-          <span>{formatNaira(balance)}</span>
+          <span>{balance < 0 ? "Credit" : "Balance"}</span>
+          <span>{formatNaira(Math.abs(balance))}</span>
         </div>
+        {balance < 0 && <p className="text-xs text-red-200">Paid more than the bill now totals — refund needed (5D).</p>}
       </div>
 
-      <p className="mt-6 text-sm text-white/45">Recording payments (cash, POS, transfer) and receipts arrive in 5B.</p>
+      {canPay && (
+        <section className="mt-6 rounded-2xl border border-white/10 bg-white/[0.04] p-5">
+          <h2 className="text-sm font-semibold">Record payment</h2>
+          <div className="mt-4">
+            <PaymentForm
+              action={recordPayment.bind(null, bill.id)}
+              balanceKobo={balance}
+              blockedReason={unpriced > 0 ? `${unpriced} item(s) have no price yet — ask the Admin to price them before taking payment.` : null}
+            />
+          </div>
+        </section>
+      )}
+
+      <section className="mt-6 rounded-2xl border border-white/10 bg-white/[0.04] p-5">
+        <h2 className="text-sm font-semibold">Payments</h2>
+        {bill.payments.length === 0 ? (
+          <p className="mt-3 text-sm text-white/55">No payments yet.</p>
+        ) : (
+          <ul className="mt-3 divide-y divide-white/5 text-sm">
+            {bill.payments.map((p) => (
+              <li key={p.id} className="flex flex-wrap items-center justify-between gap-3 py-2.5">
+                <div>
+                  <Link href={`/billing/receipts/${p.id}`} className="font-mono font-medium underline">
+                    {p.receiptNumber}
+                  </Link>
+                  <p className="text-xs text-white/50">
+                    {formatDateTime(p.createdAt)} · {METHOD_LABELS[p.method]}
+                    {p.reference ? ` (${p.reference})` : ""} · {p.receivedBy.firstName} {p.receivedBy.lastName}
+                  </p>
+                </div>
+                <span className="font-semibold">{formatNaira(p.amountKobo)}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </div>
   );
 }

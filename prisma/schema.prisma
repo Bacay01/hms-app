@@ -112,6 +112,7 @@ model User {
   schedules           DoctorSchedule[]
   leaves           DoctorLeave[]
   recordedVitals           Vitals[] @relation("VitalsRecordedBy")
+  paymentsReceived           Payment[] @relation("PaymentsReceived")
   prescriptionsWritten           Prescription[] @relation("PrescribedBy")
   labRequestsMade           LabRequest[] @relation("LabRequestedBy")
   notesAuthored           ClinicalNote[] @relation("NoteAuthor")
@@ -502,6 +503,7 @@ model Bill {
   totalKobo   Int        @default(0)
   paidKobo    Int        @default(0)
   items       BillItem[]
+  payments       Payment[]
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
@@ -529,4 +531,36 @@ model BillItem {
 
   @@unique([sourceType, sourceId])
   @@index([billId])
+}
+
+enum PaymentMethod {
+  CASH
+  POS
+  TRANSFER
+  PAYSTACK
+}
+
+enum PaymentStatus {
+  SUCCESS
+  REVERSED
+}
+
+model Payment {
+  id               String        @id @default(cuid())
+  billId           String
+  bill             Bill          @relation(fields: [billId], references: [id])
+  receiptNumber    String        @unique
+  amountKobo       Int
+  method           PaymentMethod
+  reference        String?
+  // Snapshot at the moment of payment, so a reprinted receipt never changes
+  billTotalKobo    Int
+  balanceAfterKobo Int
+  status           PaymentStatus @default(SUCCESS)
+  receivedById     String
+  receivedBy       User          @relation("PaymentsReceived", fields: [receivedById], references: [id])
+  createdAt        DateTime      @default(now())
+
+  @@index([billId])
+  @@index([receivedById, createdAt])
 }

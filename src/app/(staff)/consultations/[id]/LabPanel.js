@@ -2,6 +2,7 @@
 
 import { startTransition, useActionState, useEffect, useRef } from "react";
 import { cancelLab, requestLab } from "../orders-actions";
+import PayBadge from "@/components/staff/PayBadge";
 import { LAB_STATUS_LABELS, LAB_TESTS } from "@/lib/labTests";
 
 const input =
@@ -24,6 +25,7 @@ function LabRow({ lab, canWrite }) {
         {state?.error && <p className="text-xs text-red-200">{state.error}</p>}
       </div>
       <div className="flex shrink-0 items-center gap-2">
+        <PayBadge payment={lab.payment} cancelled={cancelled} />
         <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] uppercase text-white/70">
           {LAB_STATUS_LABELS[lab.status]}
         </span>

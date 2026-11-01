@@ -2,6 +2,7 @@
 
 import { startTransition, useActionState, useEffect, useMemo, useState } from "react";
 import { addPrescription, cancelPrescription } from "../orders-actions";
+import PayBadge from "@/components/staff/PayBadge";
 import { DRUGS, DRUG_BY_ID, buildInteractionGraph } from "@/lib/drugs";
 import { buildDrugIndex, searchDrugs } from "@/lib/drugSearch";
 import { FREQUENCIES, calcQuantity, checkPrescription, units } from "@/lib/prescribing";
@@ -49,6 +50,7 @@ function PrescriptionRow({ rx, canWrite }) {
           {state?.error && <p className="text-xs text-red-200">{state.error}</p>}
         </div>
         <div className="flex shrink-0 items-center gap-2">
+          <PayBadge payment={rx.payment} cancelled={cancelled} />
           <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] uppercase text-white/70">{rx.status.toLowerCase()}</span>
           {canWrite && rx.status === "PENDING" && (
             <form action={action}>
