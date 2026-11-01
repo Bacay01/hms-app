@@ -11,6 +11,7 @@ import { assessVitals, bmi } from "@/lib/vitals";
 import { recordVitals } from "../actions";
 import VitalsForm from "./VitalsForm";
 import ClinicalPanel from "./ClinicalPanel";
+import OrdersPanel from "./OrdersPanel";
 
 export default function ConsultationPage({ params }) {
   return (
@@ -231,9 +232,12 @@ async function Consultation({ params }) {
             canWrite={can(session.permissions, "clinical.write")}
             visitEnded={!active}
           />
-          <Card title="Prescriptions & lab requests">
-            <p className="text-sm text-white/55">Coming in 4C: prescriptions with interaction checks, and lab requests.</p>
-          </Card>
+          <OrdersPanel
+            encounterId={encounter.id}
+            canWrite={can(session.permissions, "clinical.write")}
+            visitEnded={!active}
+            allergies={hasKnownAllergies(p.allergies) ? p.allergies : ""}
+          />
         </div>
       </div>
     </div>

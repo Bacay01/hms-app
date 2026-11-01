@@ -1,0 +1,35 @@
+// Common outpatient laboratory tests
+export const LAB_TESTS = [
+  { code: "MP-RDT", name: "Malaria rapid diagnostic test (RDT)", category: "Parasitology" },
+  { code: "MP-FILM", name: "Malaria parasite (blood film)", category: "Parasitology" },
+  { code: "STOOL", name: "Stool microscopy", category: "Parasitology" },
+  { code: "FBC", name: "Full blood count (FBC)", category: "Haematology" },
+  { code: "PCV", name: "Packed cell volume (PCV)", category: "Haematology" },
+  { code: "ESR", name: "Erythrocyte sedimentation rate (ESR)", category: "Haematology" },
+  { code: "GENOTYPE", name: "Haemoglobin genotype", category: "Haematology" },
+  { code: "BLOOD-GROUP", name: "Blood group", category: "Haematology" },
+  { code: "URINALYSIS", name: "Urinalysis", category: "Microbiology" },
+  { code: "URINE-MCS", name: "Urine microscopy, culture & sensitivity", category: "Microbiology" },
+  { code: "WIDAL", name: "Widal test", category: "Microbiology" },
+  { code: "SPUTUM-TB", name: "Sputum GeneXpert (TB)", category: "Microbiology" },
+  { code: "RBS", name: "Random blood sugar", category: "Chemistry" },
+  { code: "FBS", name: "Fasting blood sugar", category: "Chemistry" },
+  { code: "HBA1C", name: "HbA1c", category: "Chemistry" },
+  { code: "EUCR", name: "Electrolytes, urea & creatinine (E/U/Cr)", category: "Chemistry" },
+  { code: "LFT", name: "Liver function tests (LFT)", category: "Chemistry" },
+  { code: "LIPID", name: "Lipid profile", category: "Chemistry" },
+  { code: "CRP", name: "C-reactive protein (CRP)", category: "Chemistry" },
+  { code: "HIV", name: "HIV screening", category: "Serology" },
+  { code: "HBSAG", name: "Hepatitis B surface antigen (HBsAg)", category: "Serology" },
+  { code: "HCV", name: "Hepatitis C antibody", category: "Serology" },
+  { code: "VDRL", name: "VDRL (syphilis)", category: "Serology" },
+  { code: "H-PYLORI", name: "H. pylori test", category: "Serology" },
+  { code: "PREG", name: "Pregnancy test (urine hCG)", category: "Other" },
+];
+
+export const LAB_STATUS_LABELS = {
+  REQUESTED: "Requested",
+  SAMPLE_COLLECTED: "Sample collected",
+  COMPLETED: "Completed",
+  CANCELLED: "Cancelled",
+};

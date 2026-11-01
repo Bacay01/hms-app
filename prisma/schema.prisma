@@ -112,6 +112,8 @@ model User {
   schedules           DoctorSchedule[]
   leaves           DoctorLeave[]
   recordedVitals           Vitals[] @relation("VitalsRecordedBy")
+  prescriptionsWritten           Prescription[] @relation("PrescribedBy")
+  labRequestsMade           LabRequest[] @relation("LabRequestedBy")
   notesAuthored           ClinicalNote[] @relation("NoteAuthor")
   diagnosesAdded           Diagnosis[] @relation("DiagnosisAddedBy")
   auditLogs           AuditLog[]
@@ -180,6 +182,8 @@ model Patient {
   consentAt    DateTime?
 
   isProvisional Boolean @default(false) // emergency record, details still to complete
+  prescriptions Prescription[]
+  labRequests   LabRequest[]
   vitals        Vitals[]
 
   registeredById String
@@ -259,6 +263,8 @@ model Encounter {
   createdBy   User   @relation("EncounterCreatedBy", fields: [createdById], references: [id])
 
   appointment Appointment?
+  prescriptions Prescription[]
+  labRequests   LabRequest[]
   clinicalNotes ClinicalNote[]
   diagnoses     Diagnosis[]
   vitals      Vitals[]
@@ -386,4 +392,64 @@ model Diagnosis {
 
   @@index([encounterId])
   @@index([code])
+}
+
+enum PrescriptionStatus {
+  PENDING
+  DISPENSED
+  CANCELLED
+}
+
+enum LabRequestStatus {
+  REQUESTED
+  SAMPLE_COLLECTED
+  COMPLETED
+  CANCELLED
+}
+
+model Prescription {
+  id             String             @id @default(cuid())
+  encounterId    String
+  encounter      Encounter          @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientId      String
+  patient        Patient            @relation(fields: [patientId], references: [id])
+  drugId         String // id from the formulary (src/lib/drugs.js)
+  drugName       String // snapshot, so old prescriptions still read correctly
+  unit           String
+  doseQty        Float
+  frequency      String // OD, BD, TDS, QDS, NOCTE, STAT
+  durationDays   Int
+  quantity       Int // total units for the pharmacy
+  instructions   String?
+  alerts         Json? // warnings shown when it was prescribed
+  overrideReason String?
+  status         PrescriptionStatus @default(PENDING)
+  prescribedById String
+  prescribedBy   User               @relation("PrescribedBy", fields: [prescribedById], references: [id])
+  cancelledAt    DateTime?
+  createdAt      DateTime           @default(now())
+
+  @@index([encounterId])
+  @@index([patientId])
+  @@index([status])
+}
+
+model LabRequest {
+  id            String           @id @default(cuid())
+  encounterId   String
+  encounter     Encounter        @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientId     String
+  patient       Patient          @relation(fields: [patientId], references: [id])
+  testCode      String
+  testName      String
+  urgent        Boolean          @default(false)
+  clinicalNote  String?
+  status        LabRequestStatus @default(REQUESTED)
+  requestedById String
+  requestedBy   User             @relation("LabRequestedBy", fields: [requestedById], references: [id])
+  cancelledAt   DateTime?
+  createdAt     DateTime         @default(now())
+
+  @@index([encounterId])
+  @@index([status])
 }
