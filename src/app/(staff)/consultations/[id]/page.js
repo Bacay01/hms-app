@@ -10,6 +10,7 @@ import { ACTIVE_STATUSES, ENCOUNTER_STATUS_LABELS, PRIORITIES, VISIT_TYPES, labe
 import { assessVitals, bmi } from "@/lib/vitals";
 import { recordVitals } from "../actions";
 import VitalsForm from "./VitalsForm";
+import ClinicalPanel from "./ClinicalPanel";
 
 export default function ConsultationPage({ params }) {
   return (
@@ -225,9 +226,11 @@ async function Consultation({ params }) {
         </div>
 
         <div className="space-y-6">
-          <Card title="Clinical notes & diagnosis">
-            <p className="text-sm text-white/55">Coming in 4B: versioned notes and diagnosis autocomplete.</p>
-          </Card>
+          <ClinicalPanel
+            encounterId={encounter.id}
+            canWrite={can(session.permissions, "clinical.write")}
+            visitEnded={!active}
+          />
           <Card title="Prescriptions & lab requests">
             <p className="text-sm text-white/55">Coming in 4C: prescriptions with interaction checks, and lab requests.</p>
           </Card>

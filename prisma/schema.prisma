@@ -112,6 +112,8 @@ model User {
   schedules           DoctorSchedule[]
   leaves           DoctorLeave[]
   recordedVitals           Vitals[] @relation("VitalsRecordedBy")
+  notesAuthored           ClinicalNote[] @relation("NoteAuthor")
+  diagnosesAdded           Diagnosis[] @relation("DiagnosisAddedBy")
   auditLogs           AuditLog[]
 
   createdAt DateTime @default(now())
@@ -257,6 +259,8 @@ model Encounter {
   createdBy   User   @relation("EncounterCreatedBy", fields: [createdById], references: [id])
 
   appointment Appointment?
+  clinicalNotes ClinicalNote[]
+  diagnoses     Diagnosis[]
   vitals      Vitals[]
 
   // Stage timestamps — startedAt is check-in
@@ -341,4 +345,45 @@ model Vitals {
 
   @@index([patientId, createdAt])
   @@index([encounterId])
+}
+
+// One VERSION of the clinical note for a visit. Editing creates a new version that points
+// to the previous one (previousId) — a singly linked list. Nothing is ever overwritten.
+model ClinicalNote {
+  id                  String        @id @default(cuid())
+  encounterId         String
+  encounter           Encounter     @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  authorId            String
+  author              User          @relation("NoteAuthor", fields: [authorId], references: [id])
+  version             Int
+  presentingComplaint String?
+  history             String?
+  examination         String?
+  plan                String?
+  amendReason         String?
+  previousId          String?       @unique
+  previous            ClinicalNote? @relation("NoteHistory", fields: [previousId], references: [id])
+  next                ClinicalNote? @relation("NoteHistory")
+  createdAt           DateTime      @default(now())
+
+  @@unique([encounterId, version])
+  @@index([encounterId])
+}
+
+// A diagnosis made during a visit. Removed diagnoses are kept (removedAt), never deleted.
+model Diagnosis {
+  id          String    @id @default(cuid())
+  encounterId String
+  encounter   Encounter @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  code        String? // WHO ICD-10, null for free text
+  name        String
+  isPrimary   Boolean   @default(false)
+  provisional Boolean   @default(false)
+  addedById   String
+  addedBy     User      @relation("DiagnosisAddedBy", fields: [addedById], references: [id])
+  removedAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([encounterId])
+  @@index([code])
 }
