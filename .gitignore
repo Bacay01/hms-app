@@ -43,3 +43,5 @@ next-env.d.ts
 
 
 /src/generated/
+# Commit the template, never the real secrets
+!.env.example
