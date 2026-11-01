@@ -10,6 +10,7 @@ import { formatDateTime, fullName } from "@/lib/patients";
 import { recordPayment } from "../payment-actions";
 import PaymentForm from "./PaymentForm";
 import OnlinePaymentPanel from "./OnlinePaymentPanel";
+import AdjustmentsPanel from "./AdjustmentsPanel";
 
 const METHOD_LABELS = { CASH: "Cash", POS: "POS", TRANSFER: "Transfer", PAYSTACK: "Paystack" };
 
@@ -100,7 +101,7 @@ async function BillDetail({ params }) {
           <span>{balance < 0 ? "Credit" : "Balance"}</span>
           <span>{formatNaira(Math.abs(balance))}</span>
         </div>
-        {balance < 0 && <p className="text-xs text-red-200">Paid more than the bill now totals — refund needed (5D).</p>}
+        {balance < 0 && <p className="text-xs text-red-200">Paid more than the bill now totals — request a refund below.</p>}
       </div>
 
       {canPay && (
@@ -117,6 +118,10 @@ async function BillDetail({ params }) {
       )}
 
       {canPay && unpriced === 0 && <OnlinePaymentPanel billId={bill.id} balanceKobo={balance} />}
+
+
+      <AdjustmentsPanel billId={bill.id} totalKobo={bill.totalKobo} paidKobo={bill.paidKobo} />
+
 
 
       <section className="mt-6 rounded-2xl border border-white/10 bg-white/[0.04] p-5">

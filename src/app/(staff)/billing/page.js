@@ -63,11 +63,21 @@ async function BillingList() {
           <h1 className="text-3xl font-bold tracking-tight">Billing</h1>
           <p className="mt-1 text-sm text-white/60">Outstanding bills, newest first.</p>
         </div>
-        {can(session.permissions, "billing.refunds.approve") && (
-          <Link href="/billing/prices" className="rounded-full border border-white/15 px-5 py-2.5 text-sm hover:bg-white/10">
-            Price list
+        <div className="flex flex-wrap gap-2">
+          <Link href="/billing/daily" className="rounded-full border border-white/15 px-5 py-2.5 text-sm hover:bg-white/10">
+            End-of-day report
           </Link>
-        )}
+          {can(session.permissions, "billing.refunds.approve") && (
+            <>
+              <Link href="/billing/approvals" className="rounded-full border border-white/15 px-5 py-2.5 text-sm hover:bg-white/10">
+                Approvals
+              </Link>
+              <Link href="/billing/prices" className="rounded-full border border-white/15 px-5 py-2.5 text-sm hover:bg-white/10">
+                Price list
+              </Link>
+            </>
+          )}
+        </div>
       </div>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2">

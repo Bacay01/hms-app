@@ -3,8 +3,10 @@
 // items: ACTIVE bill items sorted by createdAt → Map sourceId → "PAID" | "PART" | "UNPAID"
 export function allocatePayments(items, paidKobo) {
   const status = new Map();
-  let remaining = paidKobo;
+  // Discounts are negative lines: they count as money available to cover the other items
+  let remaining = paidKobo + items.filter((i) => i.amountKobo < 0).reduce((sum, i) => sum - i.amountKobo, 0);
   for (const item of items) {
+    if (item.amountKobo < 0) continue; // the discount line itself
     if (item.priceMissing) {
       status.set(item.sourceId, "UNPAID"); // can't be paid until it has a price
     } else if (remaining >= item.amountKobo) {

@@ -87,9 +87,9 @@ async function Receipt({ params }) {
         </dl>
 
         <div className="mt-5 rounded-xl bg-neutral-100 p-4 print:border print:border-neutral-300">
-          <p className="text-[11px] uppercase tracking-wider text-neutral-500">Amount paid</p>
-          <p className="text-3xl font-bold">{formatNaira(payment.amountKobo)}</p>
-          <p className="mt-1 text-xs italic text-neutral-600">{nairaInWords(payment.amountKobo)}</p>
+          <p className="text-[11px] uppercase tracking-wider text-neutral-500">{payment.amountKobo < 0 ? "Amount refunded" : "Amount paid"}</p>
+          <p className="text-3xl font-bold">{formatNaira(Math.abs(payment.amountKobo))}</p>
+          <p className="mt-1 text-xs italic text-neutral-600">{nairaInWords(Math.abs(payment.amountKobo))}</p>
         </div>
 
         <dl className="mt-4">

@@ -54,7 +54,8 @@ export function diffBillItems(existing, desired) {
     }
   }
 
-  const toVoid = existing.filter((i) => i.status === "ACTIVE" && !want.has(key(i)));
+  // Approved discounts are not orders, so the sync never voids them
+  const toVoid = existing.filter((i) => i.status === "ACTIVE" && i.sourceType !== "DISCOUNT" && !want.has(key(i)));
   return { toCreate, toVoid, toReprice };
 }
 

@@ -112,6 +112,8 @@ model User {
   schedules           DoctorSchedule[]
   leaves           DoctorLeave[]
   recordedVitals           Vitals[] @relation("VitalsRecordedBy")
+  adjustmentsRequested           BillAdjustment[] @relation("AdjustmentsRequested")
+  adjustmentsDecided           BillAdjustment[] @relation("AdjustmentsDecided")
   paymentsReceived           Payment[] @relation("PaymentsReceived")
   prescriptionsWritten           Prescription[] @relation("PrescribedBy")
   labRequestsMade           LabRequest[] @relation("LabRequestedBy")
@@ -504,6 +506,7 @@ model Bill {
   paidKobo    Int        @default(0)
   items       BillItem[]
   payments       Payment[]
+  adjustments       BillAdjustment[]
   onlinePayments       OnlinePayment[]
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
@@ -601,4 +604,38 @@ model OnlinePayment {
   createdAt        DateTime            @default(now())
 
   @@index([billId])
+}
+
+enum AdjustmentType {
+  DISCOUNT
+  REFUND
+}
+
+enum AdjustmentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// A discount or refund. Requested by one person, approved or rejected by ANOTHER.
+model BillAdjustment {
+  id              String           @id @default(cuid())
+  billId          String
+  bill            Bill             @relation(fields: [billId], references: [id])
+  type            AdjustmentType
+  amountKobo      Int
+  reason          String
+  refundMethod    PaymentMethod?
+  refundReference String?
+  status          AdjustmentStatus @default(PENDING)
+  requestedById   String
+  requestedBy     User             @relation("AdjustmentsRequested", fields: [requestedById], references: [id])
+  decidedById     String?
+  decidedBy       User?            @relation("AdjustmentsDecided", fields: [decidedById], references: [id])
+  decidedAt       DateTime?
+  decisionNote    String?
+  createdAt       DateTime         @default(now())
+
+  @@index([billId])
+  @@index([status])
 }
