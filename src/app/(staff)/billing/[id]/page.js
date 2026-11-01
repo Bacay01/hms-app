@@ -9,6 +9,7 @@ import { formatNaira } from "@/lib/money";
 import { formatDateTime, fullName } from "@/lib/patients";
 import { recordPayment } from "../payment-actions";
 import PaymentForm from "./PaymentForm";
+import OnlinePaymentPanel from "./OnlinePaymentPanel";
 
 const METHOD_LABELS = { CASH: "Cash", POS: "POS", TRANSFER: "Transfer", PAYSTACK: "Paystack" };
 
@@ -114,6 +115,9 @@ async function BillDetail({ params }) {
           </div>
         </section>
       )}
+
+      {canPay && unpriced === 0 && <OnlinePaymentPanel billId={bill.id} balanceKobo={balance} />}
+
 
       <section className="mt-6 rounded-2xl border border-white/10 bg-white/[0.04] p-5">
         <h2 className="text-sm font-semibold">Payments</h2>

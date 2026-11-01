@@ -504,6 +504,7 @@ model Bill {
   paidKobo    Int        @default(0)
   items       BillItem[]
   payments       Payment[]
+  onlinePayments       OnlinePayment[]
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
@@ -563,4 +564,41 @@ model Payment {
 
   @@index([billId])
   @@index([receivedById, createdAt])
+}
+
+// Stands in for Paystack's own records when PAYMENT_GATEWAY=simulated (local testing only)
+model SimulatedGatewayCharge {
+  id          String    @id @default(cuid())
+  reference   String    @unique
+  email       String
+  amountKobo  Int // what our app asked for
+  chargedKobo Int? // what was "charged" — differs in the tampering test
+  status      String    @default("pending") // pending | success | failed
+  paidAt      DateTime?
+  createdAt   DateTime  @default(now())
+}
+
+enum OnlinePaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+// An online checkout link for a bill. Becomes a normal Payment once the gateway confirms it.
+model OnlinePayment {
+  id               String              @id @default(cuid())
+  billId           String
+  bill             Bill                @relation(fields: [billId], references: [id])
+  reference        String              @unique
+  amountKobo       Int
+  email            String
+  authorizationUrl String
+  status           OnlinePaymentStatus @default(PENDING)
+  paymentId        String?             @unique
+  channel          String?
+  createdById      String
+  paidAt           DateTime?
+  createdAt        DateTime            @default(now())
+
+  @@index([billId])
 }
