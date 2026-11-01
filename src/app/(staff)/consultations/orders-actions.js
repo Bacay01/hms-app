@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { audit } from "@/lib/audit";
+import { syncEncounterBill } from "@/lib/billing";
 import { loadForClinician } from "@/lib/clinician";
 import { DRUG_BY_ID, getInteractionGraph } from "@/lib/drugs";
 import { LAB_TESTS } from "@/lib/labTests";
@@ -63,6 +64,7 @@ export async function addPrescription(encounterId, prevState, formData) {
     details: { prescriptionId: rx.id, warnings: issues.length },
   });
 
+  await syncEncounterBill(encounterId);
   revalidatePath(`/consultations/${encounterId}`);
   return { success: `${drug.name} prescribed — ${units(quantity, drug.unit)}.`, savedAt: rx.id };
 }
@@ -85,6 +87,7 @@ export async function cancelPrescription(prevState, formData) {
     details: { prescriptionId: id },
   });
 
+  await syncEncounterBill(rx.encounterId);
   revalidatePath(`/consultations/${rx.encounterId}`);
   return {};
 }
@@ -121,6 +124,7 @@ export async function requestLab(encounterId, prevState, formData) {
     details: { labRequestId: lab.id },
   });
 
+  await syncEncounterBill(encounterId);
   revalidatePath(`/consultations/${encounterId}`);
   return { success: `${test.name} requested.`, savedAt: lab.id };
 }
@@ -143,6 +147,7 @@ export async function cancelLab(prevState, formData) {
     details: { labRequestId: id },
   });
 
+  await syncEncounterBill(lab.encounterId);
   revalidatePath(`/consultations/${lab.encounterId}`);
   return {};
 }

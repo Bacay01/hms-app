@@ -182,6 +182,7 @@ model Patient {
   consentAt    DateTime?
 
   isProvisional Boolean @default(false) // emergency record, details still to complete
+  bills         Bill[]
   prescriptions Prescription[]
   labRequests   LabRequest[]
   vitals        Vitals[]
@@ -263,6 +264,7 @@ model Encounter {
   createdBy   User   @relation("EncounterCreatedBy", fields: [createdById], references: [id])
 
   appointment Appointment?
+  bill          Bill?
   outcome       EncounterOutcome?
   outcomeNote   String?
   referredTo    String?
@@ -461,4 +463,70 @@ enum EncounterOutcome {
   DISCHARGED
   REFERRED
   ADMITTED
+}
+
+enum ServiceCategory {
+  CONSULTATION
+  LAB
+  DRUG
+  PROCEDURE
+  BED
+  OTHER
+}
+
+enum BillItemStatus {
+  ACTIVE
+  VOIDED
+}
+
+// Money is stored in KOBO as whole numbers (₦5,000 = 500000) — never floats
+model ServicePrice {
+  id        String          @id @default(cuid())
+  code      String          @unique
+  name      String
+  category  ServiceCategory
+  unit      String
+  priceKobo Int
+  isActive  Boolean         @default(true)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+}
+
+// One bill per visit
+model Bill {
+  id          String     @id @default(cuid())
+  encounterId String     @unique
+  encounter   Encounter  @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientId   String
+  patient     Patient    @relation(fields: [patientId], references: [id])
+  totalKobo   Int        @default(0)
+  paidKobo    Int        @default(0)
+  items       BillItem[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([patientId])
+}
+
+// One line per billable thing. (sourceType, sourceId) is unique → nothing is ever billed twice.
+model BillItem {
+  id            String          @id @default(cuid())
+  billId        String
+  bill          Bill            @relation(fields: [billId], references: [id], onDelete: Cascade)
+  sourceType    String // CONSULTATION | LAB | PRESCRIPTION
+  sourceId      String // the visit, lab request or prescription it came from
+  serviceCode   String
+  description   String
+  category      ServiceCategory
+  unitPriceKobo Int
+  quantity      Int
+  amountKobo    Int
+  priceMissing  Boolean         @default(false)
+  status        BillItemStatus  @default(ACTIVE)
+  voidedAt      DateTime?
+  voidReason    String?
+  createdAt     DateTime        @default(now())
+
+  @@unique([sourceType, sourceId])
+  @@index([billId])
 }

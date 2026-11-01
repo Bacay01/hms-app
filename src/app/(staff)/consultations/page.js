@@ -6,6 +6,7 @@ import { TriageQueue } from "@/lib/dsa/TriageQueue";
 import { fullName } from "@/lib/patients";
 import { ACTIVE_STATUSES, ENCOUNTER_STATUS_LABELS, PRIORITIES, labelOf } from "@/lib/queue";
 import { dayRange, localDate } from "@/lib/time";
+import RecentPatients from "@/components/staff/RecentPatients";
 
 export default function ConsultationsPage() {
   return (
@@ -42,6 +43,8 @@ async function ConsultationList() {
       <p className="mt-1 text-sm text-white/60">
         Today&apos;s active visits, most urgent first{session.role === "DOCTOR" ? " — your patients" : ""}.
       </p>
+
+      <RecentPatients />
 
       {ordered.length === 0 ? (
         <div className="mt-6 rounded-2xl border border-dashed border-white/15 bg-white/[0.03] p-8 text-sm text-white/60">

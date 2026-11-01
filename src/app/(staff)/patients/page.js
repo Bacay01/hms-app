@@ -5,6 +5,7 @@ import { requirePermission } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { can } from "@/lib/nav";
 import { ageFrom, formatDate, formatSex, fullName } from "@/lib/patients";
+import RecentPatients from "@/components/staff/RecentPatients";
 
 export default function PatientsPage({ searchParams }) {
   return (
@@ -70,6 +71,8 @@ async function PatientList({ searchParams }) {
           </Link>
         )}
       </div>
+
+      {!query && <RecentPatients />}
 
       <Form action="/patients" className="mt-6 flex gap-2">
         <input
