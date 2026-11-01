@@ -263,6 +263,9 @@ model Encounter {
   createdBy   User   @relation("EncounterCreatedBy", fields: [createdById], references: [id])
 
   appointment Appointment?
+  outcome       EncounterOutcome?
+  outcomeNote   String?
+  referredTo    String?
   prescriptions Prescription[]
   labRequests   LabRequest[]
   clinicalNotes ClinicalNote[]
@@ -452,4 +455,10 @@ model LabRequest {
 
   @@index([encounterId])
   @@index([status])
+}
+
+enum EncounterOutcome {
+  DISCHARGED
+  REFERRED
+  ADMITTED
 }

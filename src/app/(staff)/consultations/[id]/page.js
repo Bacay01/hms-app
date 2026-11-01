@@ -12,6 +12,8 @@ import { recordVitals } from "../actions";
 import VitalsForm from "./VitalsForm";
 import ClinicalPanel from "./ClinicalPanel";
 import OrdersPanel from "./OrdersPanel";
+import VisitActions from "./VisitActions";
+import VisitTimeline from "./VisitTimeline";
 
 export default function ConsultationPage({ params }) {
   return (
@@ -61,8 +63,7 @@ async function Consultation({ params }) {
   });
   if (!encounter) notFound();
 
-  // Doctors only open their own patients' visits
-  if (session.role === "DOCTOR" && encounter.doctorId !== session.userId) notFound();
+  // Any clinician can READ any visit (continuity of care) — only the assigned doctor can WRITE
 
   const history = await prisma.vitals.findMany({
     where: { patientId: encounter.patientId },
@@ -81,6 +82,8 @@ async function Consultation({ params }) {
   const latestBmi = latest ? bmi(latest.weightKg, latest.heightCm) : null;
   const active = ACTIVE_STATUSES.includes(encounter.status);
   const canRecord = active && can(session.permissions, "vitals.write");
+  const canWriteClinical =
+    can(session.permissions, "clinical.write") && (session.role !== "DOCTOR" || encounter.doctorId === session.userId);
 
   return (
     <div className="max-w-6xl">
@@ -227,17 +230,33 @@ async function Consultation({ params }) {
         </div>
 
         <div className="space-y-6">
+          <VisitActions
+            encounterId={encounter.id}
+            status={encounter.status}
+            canWrite={canWriteClinical}
+            outcome={
+              encounter.outcome
+                ? {
+                    value: encounter.outcome,
+                    note: encounter.outcomeNote,
+                    referredTo: encounter.referredTo,
+                    endedAt: encounter.endedAt ? formatDateTime(encounter.endedAt) : null,
+                  }
+                : null
+            }
+          />
           <ClinicalPanel
             encounterId={encounter.id}
-            canWrite={can(session.permissions, "clinical.write")}
+            canWrite={canWriteClinical}
             visitEnded={!active}
           />
           <OrdersPanel
             encounterId={encounter.id}
-            canWrite={can(session.permissions, "clinical.write")}
+            canWrite={canWriteClinical}
             visitEnded={!active}
             allergies={hasKnownAllergies(p.allergies) ? p.allergies : ""}
           />
+          <VisitTimeline patientId={p.id} currentId={encounter.id} />
         </div>
       </div>
     </div>
