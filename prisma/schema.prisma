@@ -112,6 +112,7 @@ model User {
   schedules           DoctorSchedule[]
   leaves           DoctorLeave[]
   recordedVitals           Vitals[] @relation("VitalsRecordedBy")
+  labSamplesCollected           LabRequest[] @relation("LabSampleCollectedBy")
   adjustmentsRequested           BillAdjustment[] @relation("AdjustmentsRequested")
   adjustmentsDecided           BillAdjustment[] @relation("AdjustmentsDecided")
   paymentsReceived           Payment[] @relation("PaymentsReceived")
@@ -412,6 +413,8 @@ enum PrescriptionStatus {
 enum LabRequestStatus {
   REQUESTED
   SAMPLE_COLLECTED
+  IN_PROGRESS
+  RESULTED
   COMPLETED
   CANCELLED
 }
@@ -456,6 +459,13 @@ model LabRequest {
   status        LabRequestStatus @default(REQUESTED)
   requestedById String
   requestedBy   User             @relation("LabRequestedBy", fields: [requestedById], references: [id])
+  accessionNumber      String?   @unique
+  sampleCollectedAt    DateTime?
+  sampleCollectedById  String?
+  sampleCollectedBy    User?     @relation("LabSampleCollectedBy", fields: [sampleCollectedById], references: [id])
+  startedAt            DateTime?
+  unpaidOverrideReason String?
+  cancelReason         String?
   cancelledAt   DateTime?
   createdAt     DateTime         @default(now())
 

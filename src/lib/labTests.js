@@ -30,6 +30,8 @@ export const LAB_TESTS = [
 export const LAB_STATUS_LABELS = {
   REQUESTED: "Requested",
   SAMPLE_COLLECTED: "Sample collected",
+  IN_PROGRESS: "In progress",
+  RESULTED: "Awaiting verification",
   COMPLETED: "Completed",
   CANCELLED: "Cancelled",
 };

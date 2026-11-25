@@ -14,3 +14,4 @@ async function nextNumber(tx, kind, prefix) {
 
 export const nextReceiptNumber = (tx) => nextNumber(tx, "receipt", "RCT"); // RCT-2026-000001
 export const nextRefundNumber = (tx) => nextNumber(tx, "refund", "RFD"); // RFD-2026-000001
+export const nextAccessionNumber = (tx) => nextNumber(tx, "accession", "LAB"); // LAB-2026-000001
