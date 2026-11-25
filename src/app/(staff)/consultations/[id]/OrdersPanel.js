@@ -34,22 +34,25 @@ export default async function OrdersPanel({ encounterId, canWrite, visitEnded, a
     prisma.labRequest.findMany({
       where: { encounterId },
       orderBy: { createdAt: "asc" },
-      select: { id: true, testName: true, urgent: true, clinicalNote: true, status: true },
+      select: {
+        id: true,
+        testName: true,
+        urgent: true,
+        clinicalNote: true,
+        status: true,
+        resultComment: true,
+        results: { orderBy: { createdAt: "asc" }, select: { analyteCode: true, analyteName: true, value: true, unit: true, refText: true, flag: true } },
+      },
     }),
     prisma.bill.findUnique({
       where: { encounterId },
       select: {
         paidKobo: true,
-        items: {
-          where: { status: "ACTIVE" },
-          orderBy: { createdAt: "asc" },
-          select: { sourceId: true, amountKobo: true, priceMissing: true },
-        },
+        items: { where: { status: "ACTIVE" }, orderBy: { createdAt: "asc" }, select: { sourceId: true, amountKobo: true, priceMissing: true } },
       },
     }),
   ]);
 
-  // Pay before service: payments cover items in the order they were ordered
   const paidBySource = bill ? allocatePayments(bill.items, bill.paidKobo) : new Map();
   const writable = canWrite && !visitEnded;
 
@@ -66,7 +69,13 @@ export default async function OrdersPanel({ encounterId, canWrite, visitEnded, a
       <Section title="Lab requests">
         <LabPanel
           encounterId={encounterId}
-          labs={labs.map((l) => ({ ...l, payment: paidBySource.get(l.id) ?? null }))}
+          // Doctors only ever see RELEASED (verified) values
+          labs={labs.map((l) => ({
+            ...l,
+            results: l.status === "COMPLETED" ? l.results : [],
+            resultComment: l.status === "COMPLETED" ? l.resultComment : null,
+            payment: paidBySource.get(l.id) ?? null,
+          }))}
           canWrite={writable}
         />
       </Section>

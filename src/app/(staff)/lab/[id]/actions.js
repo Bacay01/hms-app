@@ -47,7 +47,7 @@ export async function saveResults(labRequestId, prevState, formData) {
     prisma.labResult.createMany({ data: rows }),
     prisma.labRequest.update({
       where: { id: labRequestId },
-      data: { status: "RESULTED", resultedAt: new Date(), resultedById: session.userId, resultComment: comment },
+      data: { status: "RESULTED", resultedAt: new Date(), resultedById: session.userId, resultComment: comment, returnNote: null },
     }),
   ]);
 

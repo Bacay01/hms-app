@@ -30,3 +30,13 @@ export function waitedText(from, now = Date.now()) {
   if (minutes < 60) return `${minutes} min`;
   return `${Math.floor(minutes / 60)} h ${minutes % 60} min`;
 }
+
+// Two-person rule: results must be verified by someone OTHER than whoever entered them
+export function canVerify({ status, resultedById, userId }) {
+  if (status !== "RESULTED") return "Only results awaiting verification can be verified.";
+  if (resultedById === userId) return "You entered these results — another scientist must verify them.";
+  return null;
+}
+
+// Short flags for the printed report
+export const FLAG_SHORT = { LOW: "L", HIGH: "H", CRITICAL_LOW: "LL", CRITICAL_HIGH: "HH", ABNORMAL: "A" };

@@ -1,9 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { startTransition, useActionState, useEffect, useRef } from "react";
 import { cancelLab, requestLab } from "../orders-actions";
 import PayBadge from "@/components/staff/PayBadge";
 import { LAB_STATUS_LABELS, LAB_TESTS } from "@/lib/labTests";
+import { FLAG_LABELS, isCritical } from "@/lib/labRanges";
 
 const input =
   "w-full rounded-xl border border-white/15 bg-black/30 px-3 py-2 text-sm text-white placeholder:text-white/35 focus:border-white/40 focus:outline-none";
@@ -13,37 +15,64 @@ function LabRow({ lab, canWrite }) {
   const [state, action, pending] = useActionState(cancelLab, {});
   const cancelled = lab.status === "CANCELLED";
   return (
-    <li className={`flex items-start justify-between gap-3 py-2.5 ${cancelled ? "opacity-50" : ""}`}>
-      <div>
-        <p className={`text-sm font-medium ${cancelled ? "line-through" : ""}`}>
-          {lab.testName}
-          {lab.urgent && (
-            <span className="ml-2 rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-semibold uppercase">Urgent</span>
+    <li className={`py-2.5 ${cancelled ? "opacity-50" : ""}`}>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className={`text-sm font-medium ${cancelled ? "line-through" : ""}`}>
+            {lab.testName}
+            {lab.urgent && <span className="ml-2 rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-semibold uppercase">Urgent</span>}
+          </p>
+          {lab.clinicalNote && <p className="text-xs text-white/50">{lab.clinicalNote}</p>}
+          {state?.error && <p className="text-xs text-red-200">{state.error}</p>}
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <PayBadge payment={lab.payment} cancelled={cancelled} />
+          <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] uppercase text-white/70">{LAB_STATUS_LABELS[lab.status]}</span>
+          {canWrite && lab.status === "REQUESTED" && (
+            <form action={action}>
+              <input type="hidden" name="labRequestId" value={lab.id} />
+              <button
+                disabled={pending}
+                onClick={(e) => {
+                  if (!confirm(`Cancel ${lab.testName}?`)) e.preventDefault();
+                }}
+                className="rounded-lg border border-white/15 px-2.5 py-1 text-xs text-white/70 hover:bg-white/10 disabled:opacity-60"
+              >
+                {pending ? "…" : "Cancel"}
+              </button>
+            </form>
           )}
-        </p>
-        {lab.clinicalNote && <p className="text-xs text-white/50">{lab.clinicalNote}</p>}
-        {state?.error && <p className="text-xs text-red-200">{state.error}</p>}
+        </div>
       </div>
-      <div className="flex shrink-0 items-center gap-2">
-        <PayBadge payment={lab.payment} cancelled={cancelled} />
-        <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] uppercase text-white/70">
-          {LAB_STATUS_LABELS[lab.status]}
-        </span>
-        {canWrite && lab.status === "REQUESTED" && (
-          <form action={action}>
-            <input type="hidden" name="labRequestId" value={lab.id} />
-            <button
-              disabled={pending}
-              onClick={(e) => {
-                if (!confirm(`Cancel ${lab.testName}?`)) e.preventDefault();
-              }}
-              className="rounded-lg border border-white/15 px-2.5 py-1 text-xs text-white/70 hover:bg-white/10 disabled:opacity-60"
-            >
-              {pending ? "…" : "Cancel"}
-            </button>
-          </form>
-        )}
-      </div>
+
+      {lab.results.length > 0 && (
+        <div className="mt-2 rounded-xl bg-black/20 p-3">
+          <ul className="space-y-1 text-xs">
+            {lab.results.map((r) => (
+              <li key={r.analyteCode} className="flex flex-wrap items-center gap-x-2">
+                <span className="text-white/60">{r.analyteName}</span>
+                <span className={`font-semibold ${r.flag ? "text-red-200" : "text-white"}`}>
+                  {r.value} {r.unit}
+                </span>
+                {r.refText && <span className="text-white/40">({r.refText})</span>}
+                {r.flag && (
+                  <span
+                    className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold uppercase ${
+                      isCritical(r.flag) ? "bg-accent text-white" : "border border-accent/60 text-red-200"
+                    }`}
+                  >
+                    {FLAG_LABELS[r.flag]}
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+          {lab.resultComment && <p className="mt-2 text-xs text-white/60">Comment: {lab.resultComment}</p>}
+          <Link href={`/lab/${lab.id}/print`} className="mt-2 inline-block text-xs underline">
+            View / print report
+          </Link>
+        </div>
+      )}
     </li>
   );
 }

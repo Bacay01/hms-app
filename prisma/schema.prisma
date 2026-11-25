@@ -112,6 +112,7 @@ model User {
   schedules           DoctorSchedule[]
   leaves           DoctorLeave[]
   recordedVitals           Vitals[] @relation("VitalsRecordedBy")
+  labResultsVerified           LabRequest[] @relation("LabVerifiedBy")
   labResultsEntered           LabRequest[] @relation("LabResultedBy")
   labSamplesCollected           LabRequest[] @relation("LabSampleCollectedBy")
   adjustmentsRequested           BillAdjustment[] @relation("AdjustmentsRequested")
@@ -472,6 +473,10 @@ model LabRequest {
   resultedBy           User?     @relation("LabResultedBy", fields: [resultedById], references: [id])
   resultComment        String?
   results              LabResult[]
+  verifiedAt           DateTime?
+  verifiedById         String?
+  verifiedBy           User?     @relation("LabVerifiedBy", fields: [verifiedById], references: [id])
+  returnNote           String?
   cancelledAt   DateTime?
   createdAt     DateTime         @default(now())
 
