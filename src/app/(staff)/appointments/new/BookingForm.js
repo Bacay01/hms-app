@@ -54,7 +54,7 @@ export default function BookingForm({ patientId, doctors, minDateTime, defaultVi
             name="scheduledAt"
             required
             min={minDateTime}
-            step={SLOT_MINUTES * 60}
+            step={60} // any minute; the server enforces 15-minute slots
             className={`${input} [color-scheme:dark]`}
           />
         </label>

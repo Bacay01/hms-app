@@ -23,7 +23,7 @@ export default function RemindersPage({ searchParams }) {
 }
 
 async function Reminders({ searchParams }) {
-  await requirePermission("staff.manage");
+  await requirePermission("appointments.manage");
   const { date: requested = "" } = await searchParams;
   const date = DATE_RE.test(String(requested)) ? String(requested) : tomorrowDate();
   const { start, end } = dayRange(date);

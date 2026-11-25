@@ -48,7 +48,7 @@ export default function RescheduleForm({ action, doctors, defaultDoctorId, defau
           required
           defaultValue={defaultDateTime}
           min={minDateTime}
-          step={SLOT_MINUTES * 60}
+          step={60} // any minute; the server enforces 15-minute slots
           className={`${input} [color-scheme:dark]`}
         />
       </label>

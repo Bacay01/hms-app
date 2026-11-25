@@ -203,6 +203,11 @@ async function Board({ searchParams }) {
         <Link href="/display" target="_blank" className={navButton}>
           TV screen ↗
         </Link>
+        {can(perms, "appointments.manage") && (
+          <Link href="/appointments/reminders" className={navButton}>
+            Reminders
+          </Link>
+        )}
         {isToday && can(perms, "appointments.manage") && <CloseDayButton />}
       </div>
 
