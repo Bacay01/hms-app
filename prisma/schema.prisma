@@ -216,6 +216,7 @@ model Appointment {
   visitType    VisitType         @default(NEW)
   status       AppointmentStatus @default(BOOKED)
   cancelReason String?
+  reminders    AppointmentReminder[]
 
   patientId String
   patient   Patient @relation(fields: [patientId], references: [id])
@@ -638,4 +639,29 @@ model BillAdjustment {
 
   @@index([billId])
   @@index([status])
+}
+
+enum ReminderStatus {
+  SENT
+  FAILED
+  SKIPPED
+}
+
+// One row per appointment per kind of reminder — the unique key makes double-sending impossible
+model AppointmentReminder {
+  id            String         @id @default(cuid())
+  appointmentId String
+  appointment   Appointment    @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  kind          String         @default("DAY_BEFORE")
+  channel       String         @default("SMS")
+  toPhoneMasked String?
+  message       String?
+  status        ReminderStatus
+  attempts      Int            @default(0)
+  error         String?
+  sentAt        DateTime?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@unique([appointmentId, kind])
 }

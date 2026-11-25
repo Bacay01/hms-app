@@ -1,5 +1,7 @@
 "use server";
 
+import { validateSlot } from "@/lib/scheduling";
+
    import { TriageQueue } from "@/lib/dsa/TriageQueue";
    import { getUndoableAction } from "@/lib/undo";
 
