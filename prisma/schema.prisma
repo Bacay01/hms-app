@@ -112,6 +112,7 @@ model User {
   schedules           DoctorSchedule[]
   leaves           DoctorLeave[]
   recordedVitals           Vitals[] @relation("VitalsRecordedBy")
+  labResultsEntered           LabRequest[] @relation("LabResultedBy")
   labSamplesCollected           LabRequest[] @relation("LabSampleCollectedBy")
   adjustmentsRequested           BillAdjustment[] @relation("AdjustmentsRequested")
   adjustmentsDecided           BillAdjustment[] @relation("AdjustmentsDecided")
@@ -466,6 +467,11 @@ model LabRequest {
   startedAt            DateTime?
   unpaidOverrideReason String?
   cancelReason         String?
+  resultedAt           DateTime?
+  resultedById         String?
+  resultedBy           User?     @relation("LabResultedBy", fields: [resultedById], references: [id])
+  resultComment        String?
+  results              LabResult[]
   cancelledAt   DateTime?
   createdAt     DateTime         @default(now())
 
@@ -674,4 +680,24 @@ model AppointmentReminder {
   updatedAt     DateTime       @updatedAt
 
   @@unique([appointmentId, kind])
+}
+
+// One measured value. The reference range and flag are SNAPSHOTS taken when it was entered,
+// so a later change to the catalogue never changes an old result.
+model LabResult {
+  id           String     @id @default(cuid())
+  labRequestId String
+  labRequest   LabRequest @relation(fields: [labRequestId], references: [id], onDelete: Cascade)
+  analyteCode  String
+  analyteName  String
+  value        String // as entered: "12.4", "Positive"
+  numericValue Float?
+  unit         String?
+  refLow       Float?
+  refHigh      Float?
+  refText      String?
+  flag         String? // LOW | HIGH | CRITICAL_LOW | CRITICAL_HIGH | ABNORMAL
+  createdAt    DateTime   @default(now())
+
+  @@unique([labRequestId, analyteCode])
 }

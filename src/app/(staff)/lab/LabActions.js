@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState, useState } from "react";
 import { cancelLabTest, collectSample, startTest } from "./actions";
 
@@ -40,11 +41,17 @@ export default function LabActions({ lab }) {
           </form>
         )}
 
-        {lab.status === "IN_PROGRESS" && <span className="text-xs text-white/50">Result entry arrives in 6B</span>}
+        {(lab.status === "IN_PROGRESS" || lab.status === "RESULTED") && (
+          <Link href={`/lab/${lab.id}`} className={primary}>
+            {lab.status === "RESULTED" ? "Review results" : "Enter results"}
+          </Link>
+        )}
 
+        {lab.status !== "RESULTED" && (
         <button type="button" onClick={() => setShowCancel((v) => !v)} className={secondary}>
           {showCancel ? "Keep" : "Cancel test"}
         </button>
+        )}
       </div>
 
       {showCancel && (

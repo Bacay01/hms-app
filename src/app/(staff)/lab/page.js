@@ -9,7 +9,7 @@ import { ageFrom, formatSex, fullName } from "@/lib/patients";
 import PayBadge from "@/components/staff/PayBadge";
 import LabActions from "./LabActions";
 
-const ACTIVE = ["REQUESTED", "SAMPLE_COLLECTED", "IN_PROGRESS"];
+const ACTIVE = ["REQUESTED", "SAMPLE_COLLECTED", "IN_PROGRESS", "RESULTED"];
 const PRIORITY_STYLE = {
   EMERGENCY: "bg-accent text-white",
   URGENT: "border border-accent/60 text-red-200",
@@ -46,7 +46,7 @@ async function Worklist() {
     <div className="max-w-6xl">
       <h1 className="text-3xl font-bold tracking-tight">Laboratory</h1>
       <p className="mt-1 text-sm text-white/60">
-        {count("REQUESTED")} to collect · {count("SAMPLE_COLLECTED")} to start · {count("IN_PROGRESS")} in progress — emergencies and urgent
+        {count("REQUESTED")} to collect · {count("SAMPLE_COLLECTED")} to start · {count("IN_PROGRESS")} in progress · {count("RESULTED")} awaiting verification — emergencies and urgent
         tests first, then oldest.
       </p>
 
