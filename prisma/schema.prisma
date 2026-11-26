@@ -112,6 +112,8 @@ model User {
   schedules           DoctorSchedule[]
   leaves           DoctorLeave[]
   recordedVitals           Vitals[] @relation("VitalsRecordedBy")
+  stockReceived           StockBatch[] @relation("StockReceivedBy")
+  stockMovements           StockMovement[] @relation("StockMovedBy")
   labResultsVerified           LabRequest[] @relation("LabVerifiedBy")
   labResultsEntered           LabRequest[] @relation("LabResultedBy")
   labSamplesCollected           LabRequest[] @relation("LabSampleCollectedBy")
@@ -705,4 +707,49 @@ model LabResult {
   createdAt    DateTime   @default(now())
 
   @@unique([labRequestId, analyteCode])
+}
+
+enum StockMovementType {
+  RECEIVED
+  DISPENSED
+  ADJUSTED
+  RETURNED
+}
+
+// One delivered batch of one drug. quantityOnHand is kept in step with its ledger
+// (StockMovement rows) inside the same transaction every time.
+model StockBatch {
+  id               String          @id @default(cuid())
+  drugId           String // formulary id (src/lib/drugs.js)
+  batchNumber      String
+  expiryDate       String // "YYYY-MM-DD"
+  supplier         String?
+  costKobo         Int? // cost per unit
+  quantityReceived Int
+  quantityOnHand   Int
+  receivedById     String
+  receivedBy       User            @relation("StockReceivedBy", fields: [receivedById], references: [id])
+  movements        StockMovement[]
+  createdAt        DateTime        @default(now())
+
+  @@unique([drugId, batchNumber])
+  @@index([drugId, expiryDate])
+}
+
+// The ledger: every change to stock is a row. Stock = the sum of its movements.
+model StockMovement {
+  id             String            @id @default(cuid())
+  batchId        String
+  batch          StockBatch        @relation(fields: [batchId], references: [id])
+  drugId         String
+  type           StockMovementType
+  quantity       Int // signed: + in, − out
+  reason         String?
+  prescriptionId String?
+  userId         String
+  user           User              @relation("StockMovedBy", fields: [userId], references: [id])
+  createdAt      DateTime          @default(now())
+
+  @@index([drugId, createdAt])
+  @@index([batchId])
 }
