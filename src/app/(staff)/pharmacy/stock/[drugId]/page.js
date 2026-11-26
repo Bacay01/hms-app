@@ -10,8 +10,9 @@ import { formatDateTime } from "@/lib/patients";
 import { units } from "@/lib/prescribing";
 import { NEAR_EXPIRY_DAYS, daysUntil } from "@/lib/stock";
 import { localDate } from "@/lib/time";
+import BatchActions from "./BatchActions";
 
-const MOVE_LABELS = { RECEIVED: "Received", DISPENSED: "Dispensed", ADJUSTED: "Adjusted", RETURNED: "Returned" };
+const MOVE_LABELS = { RECEIVED: "Received", DISPENSED: "Dispensed", ADJUSTED: "Adjusted", RETURNED: "Returned to supplier" };
 
 export default function DrugStockPage({ params }) {
   return (
@@ -23,6 +24,7 @@ export default function DrugStockPage({ params }) {
 
 async function DrugStock({ params }) {
   const session = await requirePermission("pharmacy.read");
+  const canManage = can(session.permissions, "inventory.manage");
   const { drugId } = await params;
   const drug = DRUG_BY_ID.get(drugId);
   if (!drug) notFound();
@@ -36,21 +38,20 @@ async function DrugStock({ params }) {
       take: 50,
       include: { user: { select: { firstName: true } }, batch: { select: { batchNumber: true } } },
     }),
-    // Re-add the ledger per batch: it must equal quantityOnHand
     prisma.stockMovement.groupBy({ by: ["batchId"], where: { drugId }, _sum: { quantity: true } }),
   ]);
   const ledgerSum = new Map(ledger.map((l) => [l.batchId, l._sum.quantity ?? 0]));
   const mismatches = batches.filter((b) => (ledgerSum.get(b.id) ?? 0) !== b.quantityOnHand);
 
   return (
-    <div className="max-w-5xl">
+    <div className="max-w-6xl">
       <Link href="/pharmacy/stock" className="text-sm text-white/60 hover:text-white">← Stock</Link>
       <div className="mt-2 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">{drug.name}</h1>
-          <p className="mt-1 text-sm text-white/60">Batches in expiry order — the order they will be dispensed (oldest expiry first).</p>
+          <p className="mt-1 text-sm text-white/60">Batches in expiry order — the order they are dispensed (soonest expiry first; expired batches are skipped).</p>
         </div>
-        {can(session.permissions, "inventory.manage") && (
+        {canManage && (
           <Link href={`/pharmacy/receive?drug=${drug.id}`} className="rounded-full bg-accent px-5 py-2.5 text-sm font-semibold hover:bg-accent-hover">
             Receive this drug
           </Link>
@@ -66,7 +67,7 @@ async function DrugStock({ params }) {
       )}
 
       <div className="mt-4 overflow-x-auto rounded-2xl border border-white/10">
-        <table className="w-full min-w-[720px] text-left text-sm">
+        <table className="w-full min-w-[860px] text-left text-sm">
           <thead className="border-b border-white/10 bg-white/[0.03] text-xs uppercase tracking-wider text-white/45">
             <tr>
               <th className="px-4 py-3 font-medium">Batch</th>
@@ -75,18 +76,19 @@ async function DrugStock({ params }) {
               <th className="px-4 py-3 text-right font-medium">Received</th>
               <th className="px-4 py-3 font-medium">Supplier</th>
               <th className="px-4 py-3 text-right font-medium">Cost / unit</th>
+              {canManage && <th className="px-4 py-3" />}
             </tr>
           </thead>
           <tbody className="divide-y divide-white/5">
             {batches.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-6 text-white/55">No stock received yet.</td>
+                <td colSpan={7} className="px-4 py-6 text-white/55">No stock received yet.</td>
               </tr>
             )}
             {batches.map((b) => {
               const days = daysUntil(b.expiryDate, today);
               return (
-                <tr key={b.id} className={b.quantityOnHand === 0 ? "text-white/35" : ""}>
+                <tr key={b.id} className={`align-top ${b.quantityOnHand === 0 ? "text-white/35" : ""}`}>
                   <td className="px-4 py-2.5 font-mono text-xs">{b.batchNumber}</td>
                   <td className="px-4 py-2.5">
                     {b.expiryDate}{" "}
@@ -98,6 +100,11 @@ async function DrugStock({ params }) {
                   <td className="px-4 py-2.5 text-right text-white/60">{b.quantityReceived}</td>
                   <td className="px-4 py-2.5 text-white/60">{b.supplier ?? "—"}</td>
                   <td className="px-4 py-2.5 text-right text-white/60">{b.costKobo != null ? formatNaira(b.costKobo) : "—"}</td>
+                  {canManage && (
+                    <td className="px-4 py-2.5">
+                      <BatchActions batch={{ id: b.id, batchNumber: b.batchNumber, onHand: b.quantityOnHand, expired: days < 0 }} />
+                    </td>
+                  )}
                 </tr>
               );
             })}

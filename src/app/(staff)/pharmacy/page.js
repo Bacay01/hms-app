@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import Link from "next/link";
 import { requirePermission } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { can } from "@/lib/nav";
@@ -163,7 +164,10 @@ async function Queue() {
                   {rx.unpaidOverrideReason && <span className="text-xs text-red-200"> · unpaid: {rx.unpaidOverrideReason}</span>}
                 </span>
                 <span className="text-xs text-white/50">
-                  {formatDateTime(rx.dispensedAt)} · {rx.dispensedBy?.firstName}
+                  {formatDateTime(rx.dispensedAt)} · {rx.dispensedBy?.firstName} ·{" "}
+                  <Link href={`/pharmacy/label/${rx.id}`} className="underline">
+                    Label
+                  </Link>
                 </span>
               </li>
             ))}

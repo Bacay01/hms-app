@@ -71,3 +71,28 @@ export function parseBatchForm(formData, today) {
   const supplier = String(formData.get("supplier") || "").trim().slice(0, 80) || null;
   return { data: { drug, batchNumber, expiryDate, quantity, costKobo, supplier } };
 }
+
+// ---------- Stock adjustments ----------
+export const ADJUSTMENT_TYPES = {
+  DAMAGED: { label: "Damaged / broken", sign: -1, movement: "ADJUSTED" },
+  EXPIRED: { label: "Expired — write-off", sign: -1, movement: "ADJUSTED" },
+  RETURN_TO_SUPPLIER: { label: "Returned to supplier", sign: -1, movement: "RETURNED" },
+  COUNT_DOWN: { label: "Stock count: less than recorded", sign: -1, movement: "ADJUSTED" },
+  COUNT_UP: { label: "Stock count: more than recorded", sign: 1, movement: "ADJUSTED" },
+};
+
+// Returns { data: { type, movementType, quantity (signed), reason } } or { error }
+export function parseAdjustment(formData, onHand) {
+  const type = String(formData.get("type") || "");
+  const t = ADJUSTMENT_TYPES[type];
+  if (!t) return { error: "Choose what kind of adjustment this is." };
+
+  const qty = Number.parseInt(String(formData.get("quantity") || ""), 10);
+  if (!(qty >= 1 && qty <= 100_000)) return { error: "Quantity must be a whole number of at least 1." };
+
+  const note = String(formData.get("note") ?? "").trim().slice(0, 200);
+  if (type !== "EXPIRED" && note.length < 5) return { error: "Give a reason (at least 5 characters) — it goes in the ledger." };
+  if (t.sign < 0 && qty > onHand) return { error: `Only ${onHand} on hand in this batch — you can't remove ${qty}.` };
+
+  return { data: { type, movementType: t.movement, quantity: t.sign * qty, reason: note ? `${t.label}: ${note}` : t.label } };
+}

@@ -87,3 +87,12 @@ export function parsePrescriptionForm(formData) {
 
   return { data: { drug, doseQty, frequency, durationDays, quantity, instructions } };
 }
+
+// Plain-language directions for the dispensing label
+const FREQ_TEXT = { OD: "once a day", BD: "twice a day", TDS: "three times a day", QDS: "four times a day", NOCTE: "at night" };
+
+export function plainInstructions(rx) {
+  const dose = units(rx.doseQty, rx.unit);
+  if (rx.frequency === "STAT") return `Take ${dose} now (one dose only).`;
+  return `Take ${dose} ${FREQ_TEXT[rx.frequency] ?? rx.frequency} for ${rx.durationDays} day${rx.durationDays === 1 ? "" : "s"}.`;
+}
