@@ -112,6 +112,7 @@ model User {
   schedules           DoctorSchedule[]
   leaves           DoctorLeave[]
   recordedVitals           Vitals[] @relation("VitalsRecordedBy")
+  prescriptionsDispensed           Prescription[] @relation("PrescriptionDispensedBy")
   stockReceived           StockBatch[] @relation("StockReceivedBy")
   stockMovements           StockMovement[] @relation("StockMovedBy")
   labResultsVerified           LabRequest[] @relation("LabVerifiedBy")
@@ -442,6 +443,10 @@ model Prescription {
   status         PrescriptionStatus @default(PENDING)
   prescribedById String
   prescribedBy   User               @relation("PrescribedBy", fields: [prescribedById], references: [id])
+  dispensedAt          DateTime?
+  dispensedById        String?
+  dispensedBy          User?     @relation("PrescriptionDispensedBy", fields: [dispensedById], references: [id])
+  unpaidOverrideReason String?
   cancelledAt    DateTime?
   createdAt      DateTime           @default(now())
 

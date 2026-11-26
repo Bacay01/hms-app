@@ -18,7 +18,7 @@ async function Receive({ searchParams }) {
 
   return (
     <div className="max-w-2xl">
-      <Link href="/pharmacy" className="text-sm text-white/60 hover:text-white">← Pharmacy</Link>
+      <Link href="/pharmacy/stock" className="text-sm text-white/60 hover:text-white">← Stock</Link>
       <h1 className="mt-2 text-3xl font-bold tracking-tight">Receive stock</h1>
       <p className="mt-1 text-sm text-white/60">Record a delivery, one batch at a time. Expired batches can&apos;t be received.</p>
       <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.04] p-6">

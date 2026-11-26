@@ -52,6 +52,7 @@ export async function receiveStock(prevState, formData) {
     details: { drugId: drug.id, batchNumber, quantity, expiryDate },
   });
   revalidatePath("/pharmacy");
+  revalidatePath("/pharmacy/stock");
   revalidatePath(`/pharmacy/stock/${drug.id}`);
   return { success: `Received ${units(quantity, drug.unit)} of ${drug.name} (batch ${batchNumber}).`, savedAt: Date.now() };
 }
@@ -99,5 +100,6 @@ export async function loadDemoStock(prevState, formData) {
 
   await audit({ action: "stock.demo_loaded", entity: "StockBatch", userId: session.userId, details: { batches: batches.length } });
   revalidatePath("/pharmacy");
+  revalidatePath("/pharmacy/stock");
   return { success: `Loaded ${batches.length} demo batches.` };
 }

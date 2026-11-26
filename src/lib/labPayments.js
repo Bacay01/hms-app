@@ -22,3 +22,6 @@ export async function labPaymentStatus(lab) {
   const byEncounter = await paymentStatusesForEncounters([lab.encounterId]);
   return byEncounter.get(lab.encounterId)?.get(lab.id) ?? "UNPAID";
 }
+
+// Same pay-before-service check for any billed order (lab test or prescription): needs { id, encounterId }
+export const orderPaymentStatus = labPaymentStatus;

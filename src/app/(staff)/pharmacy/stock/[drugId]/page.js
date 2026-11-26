@@ -44,7 +44,7 @@ async function DrugStock({ params }) {
 
   return (
     <div className="max-w-5xl">
-      <Link href="/pharmacy" className="text-sm text-white/60 hover:text-white">← Pharmacy</Link>
+      <Link href="/pharmacy/stock" className="text-sm text-white/60 hover:text-white">← Stock</Link>
       <div className="mt-2 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">{drug.name}</h1>
