@@ -8,6 +8,7 @@ import { can } from "@/lib/nav";
 import { ageFrom, formatDateTime, formatSex, fullName, hasKnownAllergies } from "@/lib/patients";
 import { ACTIVE_STATUSES, ENCOUNTER_STATUS_LABELS, PRIORITIES, VISIT_TYPES, labelOf } from "@/lib/queue";
 import { assessVitals, bmi } from "@/lib/vitals";
+import { isInpatient } from "@/lib/admissions";
 import { recordVitals } from "../actions";
 import VitalsForm from "./VitalsForm";
 import ClinicalPanel from "./ClinicalPanel";
@@ -80,7 +81,7 @@ async function Consultation({ params }) {
   const assessment = latest ? assessVitals(latest, age) : null;
   const flagged = new Set(assessment?.flags.map((f) => f.field) ?? []);
   const latestBmi = latest ? bmi(latest.weightKg, latest.heightCm) : null;
-  const active = ACTIVE_STATUSES.includes(encounter.status);
+  const active = ACTIVE_STATUSES.includes(encounter.status) || (await isInpatient(encounter.id)); // admitted patients stay open
   const canRecord = active && can(session.permissions, "vitals.write");
   const canWriteClinical =
     can(session.permissions, "clinical.write") && (session.role !== "DOCTOR" || encounter.doctorId === session.userId);

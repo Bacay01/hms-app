@@ -13,6 +13,7 @@ export const NAV_GROUPS = [
       { label: "Patients", href: "/patients", permission: "patients.read", description: "Register, search and view patient records." },
       { label: "Appointments", href: "/appointments", permission: "appointments.read", description: "Bookings, walk-ins and doctor queues." },
       { label: "Consultations", href: "/consultations", permission: "clinical.read", description: "Vitals, notes, diagnoses and prescriptions." },
+      { label: "Inpatient", href: "/inpatient", permission: "clinical.read", description: "Wards, beds and admitted patients." },
     ],
   },
   {

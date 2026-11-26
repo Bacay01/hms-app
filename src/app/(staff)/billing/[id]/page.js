@@ -8,11 +8,13 @@ import { syncEncounterBill } from "@/lib/billing";
 import { formatNaira } from "@/lib/money";
 import { formatDateTime, fullName } from "@/lib/patients";
 import { recordPayment } from "../payment-actions";
+import { setPreauth } from "../../hmo/actions";
 import PaymentForm from "./PaymentForm";
 import OnlinePaymentPanel from "./OnlinePaymentPanel";
 import AdjustmentsPanel from "./AdjustmentsPanel";
+import PreauthForm from "./PreauthForm";
 
-const METHOD_LABELS = { CASH: "Cash", POS: "POS", TRANSFER: "Transfer", PAYSTACK: "Paystack" };
+const METHOD_LABELS = { CASH: "Cash", POS: "POS", TRANSFER: "Transfer", PAYSTACK: "Online" };
 
 export default function BillPage({ params }) {
   return (
@@ -43,6 +45,8 @@ async function BillDetail({ params }) {
   const balance = bill.totalKobo - bill.paidKobo;
   const unpriced = bill.items.filter((i) => i.status === "ACTIVE" && i.priceMissing).length;
   const canPay = can(session.permissions, "billing.payments");
+  const canHmo = can(session.permissions, "hmo.manage");
+  const hasHmo = Boolean(bill.hmoId);
 
   return (
     <div className="max-w-4xl">
@@ -55,32 +59,47 @@ async function BillDetail({ params }) {
           {formatDateTime(bill.encounter.startedAt)}
           {bill.encounter.doctor ? ` · Dr ${bill.encounter.doctor.lastName}` : ""}
         </p>
+        {hasHmo && (
+          <p className="mt-2 text-sm">
+            <span className="rounded-full bg-white/10 px-2.5 py-0.5 text-xs">HMO</span> {bill.hmoPlanName} · enrolment{" "}
+            <span className="font-mono">{bill.enrolmentNo}</span>
+          </p>
+        )}
       </div>
 
       <div className="mt-6 overflow-x-auto rounded-2xl border border-white/10">
-        <table className="w-full min-w-[620px] text-left text-sm">
+        <table className="w-full min-w-[680px] text-left text-sm">
           <thead className="border-b border-white/10 bg-white/[0.03] text-xs uppercase tracking-wider text-white/45">
             <tr>
               <th className="px-4 py-3 font-medium">Item</th>
               <th className="px-4 py-3 text-right font-medium">Qty × Price</th>
               <th className="px-4 py-3 text-right font-medium">Amount</th>
+              {hasHmo && <th className="px-4 py-3 text-right font-medium">HMO pays</th>}
             </tr>
           </thead>
           <tbody className="divide-y divide-white/5">
             {bill.items.map((i) => {
               const voided = i.status === "VOIDED";
               return (
-                <tr key={i.id} className={voided ? "text-white/35" : ""}>
+                <tr key={i.id} className={`align-top ${voided ? "text-white/35" : ""}`}>
                   <td className="px-4 py-3">
                     <p className={voided ? "line-through" : "font-medium"}>{i.description}</p>
                     <p className="text-xs text-white/40">{i.category.charAt(0) + i.category.slice(1).toLowerCase()}</p>
                     {voided && <p className="text-xs">Voided: {i.voidReason}</p>}
                     {!voided && i.priceMissing && <p className="text-xs text-red-200">No price set — ask the Admin to price {i.serviceCode}</p>}
+                    {!voided && i.preauthCode && <p className="text-xs text-white/55">Pre-auth {i.preauthCode}</p>}
+                    {!voided && i.preauthRequired && !i.preauthCode && (
+                      <>
+                        <p className="text-xs text-red-200">Pre-auth needed — patient pays until authorized</p>
+                        {canHmo && <PreauthForm action={setPreauth.bind(null, i.id)} />}
+                      </>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-right text-white/70">
                     {i.quantity} × {formatNaira(i.unitPriceKobo)}
                   </td>
                   <td className={`px-4 py-3 text-right ${voided ? "line-through" : ""}`}>{formatNaira(i.amountKobo)}</td>
+                  {hasHmo && <td className="px-4 py-3 text-right text-white/80">{voided || !i.hmoKobo ? "—" : formatNaira(i.hmoKobo)}</td>}
                 </tr>
               );
             })}
@@ -89,14 +108,17 @@ async function BillDetail({ params }) {
       </div>
 
       <div className="mt-4 ml-auto max-w-xs space-y-1.5 text-sm">
+        {hasHmo && (
+          <>
+            <div className="flex justify-between text-white/70"><span>Gross</span><span>{formatNaira(bill.grossKobo)}</span></div>
+            <div className="flex justify-between text-white/70"><span>HMO pays</span><span>−{formatNaira(bill.hmoKobo)}</span></div>
+          </>
+        )}
         <div className="flex justify-between text-white/70">
-          <span>Total</span>
+          <span>{hasHmo ? "Patient pays" : "Total"}</span>
           <span>{formatNaira(bill.totalKobo)}</span>
         </div>
-        <div className="flex justify-between text-white/70">
-          <span>Paid</span>
-          <span>{formatNaira(bill.paidKobo)}</span>
-        </div>
+        <div className="flex justify-between text-white/70"><span>Paid</span><span>{formatNaira(bill.paidKobo)}</span></div>
         <div className="flex justify-between border-t border-white/10 pt-1.5 text-lg font-bold">
           <span>{balance < 0 ? "Credit" : "Balance"}</span>
           <span>{formatNaira(Math.abs(balance))}</span>
@@ -118,11 +140,7 @@ async function BillDetail({ params }) {
       )}
 
       {canPay && unpriced === 0 && <OnlinePaymentPanel billId={bill.id} balanceKobo={balance} />}
-
-
       <AdjustmentsPanel billId={bill.id} totalKobo={bill.totalKobo} paidKobo={bill.paidKobo} />
-
-
 
       <section className="mt-6 rounded-2xl border border-white/10 bg-white/[0.04] p-5">
         <h2 className="text-sm font-semibold">Payments</h2>
@@ -141,7 +159,7 @@ async function BillDetail({ params }) {
                     {p.reference ? ` (${p.reference})` : ""} · {p.receivedBy.firstName} {p.receivedBy.lastName}
                   </p>
                 </div>
-                <span className="font-semibold">{formatNaira(p.amountKobo)}</span>
+                <span className={`font-semibold ${p.amountKobo < 0 ? "text-red-200" : ""}`}>{formatNaira(p.amountKobo)}</span>
               </li>
             ))}
           </ul>

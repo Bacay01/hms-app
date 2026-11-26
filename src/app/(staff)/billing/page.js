@@ -4,19 +4,20 @@ import { requirePermission } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { can } from "@/lib/nav";
 import { syncEncounterBill } from "@/lib/billing";
+import BillSearch from "./BillSearch";
 import { formatNaira } from "@/lib/money";
 import { formatDateTime, fullName } from "@/lib/patients";
 import { dayRange, localDate } from "@/lib/time";
 
-export default function BillingPage() {
+export default function BillingPage({ searchParams }) {
   return (
     <Suspense fallback={<p className="text-sm text-white/50">Loading bills…</p>}>
-      <BillingList />
+      <BillingList searchParams={searchParams} />
     </Suspense>
   );
 }
 
-async function BillingList() {
+async function BillingList({ searchParams }) {
   const session = await requirePermission("billing.read");
 
   // Today's visits that don't have a bill yet get one now (consultation fee etc.)
@@ -90,6 +91,8 @@ async function BillingList() {
           <p className="mt-1 text-3xl font-bold">{outstanding.length}</p>
         </div>
       </div>
+
+      <BillSearch searchParams={searchParams} />
 
       {outstanding.length === 0 ? (
         <div className="mt-6 rounded-2xl border border-dashed border-white/15 bg-white/[0.03] p-8 text-sm text-white/60">

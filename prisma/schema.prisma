@@ -112,6 +112,10 @@ model User {
   schedules           DoctorSchedule[]
   leaves           DoctorLeave[]
   recordedVitals           Vitals[] @relation("VitalsRecordedBy")
+  admissionsMade           Admission[] @relation("AdmittingDoctor")
+  dischargesMade           Admission[] @relation("DischargedBy")
+  nursingNotes           NursingNote[] @relation("NursingNotes")
+  medsGiven           MedicationAdministration[] @relation("MedsGiven")
   prescriptionsDispensed           Prescription[] @relation("PrescriptionDispensedBy")
   stockReceived           StockBatch[] @relation("StockReceivedBy")
   stockMovements           StockMovement[] @relation("StockMovedBy")
@@ -191,6 +195,8 @@ model Patient {
   consentAt    DateTime?
 
   isProvisional Boolean @default(false) // emergency record, details still to complete
+  hmoEnrolments PatientHmo[]
+  admissions    Admission[]
   bills         Bill[]
   prescriptions Prescription[]
   labRequests   LabRequest[]
@@ -274,6 +280,7 @@ model Encounter {
   createdBy   User   @relation("EncounterCreatedBy", fields: [createdById], references: [id])
 
   appointment Appointment?
+  admission     Admission?
   bill          Bill?
   outcome       EncounterOutcome?
   outcomeNote   String?
@@ -446,6 +453,7 @@ model Prescription {
   dispensedAt          DateTime?
   dispensedById        String?
   dispensedBy          User?     @relation("PrescriptionDispensedBy", fields: [dispensedById], references: [id])
+  administrations      MedicationAdministration[]
   unpaidOverrideReason String?
   cancelledAt    DateTime?
   createdAt      DateTime           @default(now())
@@ -532,6 +540,12 @@ model Bill {
   patientId   String
   patient     Patient    @relation(fields: [patientId], references: [id])
   totalKobo   Int        @default(0)
+  grossKobo   Int        @default(0)
+  hmoKobo   Int        @default(0)
+  hmoId   String?
+  hmo   Hmo?       @relation(fields: [hmoId], references: [id])
+  hmoPlanName   String?
+  enrolmentNo   String?
   paidKobo    Int        @default(0)
   items       BillItem[]
   payments       Payment[]
@@ -557,6 +571,9 @@ model BillItem {
   quantity      Int
   amountKobo    Int
   priceMissing  Boolean         @default(false)
+  hmoKobo  Int         @default(0)
+  preauthRequired  Boolean         @default(false)
+  preauthCode  String?
   status        BillItemStatus  @default(ACTIVE)
   voidedAt      DateTime?
   voidReason    String?
@@ -757,4 +774,176 @@ model StockMovement {
 
   @@index([drugId, createdAt])
   @@index([batchId])
+}
+
+model Ward {
+  id            String   @id @default(cuid())
+  name          String   @unique
+  kind          String?
+  dailyRateKobo Int
+  isActive      Boolean  @default(true)
+  beds          Bed[]
+  createdAt     DateTime @default(now())
+}
+
+// currentAdmissionId is UNIQUE: one patient per bed, enforced by the database
+model Bed {
+  id                 String     @id @default(cuid())
+  wardId             String
+  ward               Ward       @relation(fields: [wardId], references: [id])
+  label              String
+  isActive           Boolean    @default(true)
+  currentAdmissionId String?    @unique
+  currentAdmission   Admission? @relation("BedOccupant", fields: [currentAdmissionId], references: [id])
+  stays              BedStay[]
+  createdAt          DateTime   @default(now())
+
+  @@unique([wardId, label])
+}
+
+enum AdmissionStatus {
+  AWAITING_BED
+  ADMITTED
+  DISCHARGED
+}
+
+model Admission {
+  id                 String                     @id @default(cuid())
+  encounterId        String                     @unique
+  encounter          Encounter                  @relation(fields: [encounterId], references: [id])
+  patientId          String
+  patient            Patient                    @relation(fields: [patientId], references: [id])
+  status             AdmissionStatus            @default(AWAITING_BED)
+  reason             String?
+  admittingDoctorId  String
+  admittingDoctor    User                       @relation("AdmittingDoctor", fields: [admittingDoctorId], references: [id])
+  admittedAt         DateTime?
+  dischargedAt       DateTime?
+  dischargedById     String?
+  dischargedBy       User?                      @relation("DischargedBy", fields: [dischargedById], references: [id])
+  dischargeDiagnosis String?
+  dischargeSummary   String?
+  followUp           String?
+  occupiedBed        Bed?                       @relation("BedOccupant")
+  bedStays           BedStay[]
+  nursingNotes       NursingNote[]
+  administrations    MedicationAdministration[]
+  createdAt          DateTime                   @default(now())
+
+  @@index([status])
+}
+
+// Each bed the patient occupied. Ward name and rate are snapshots, so a later price change
+// never alters charges already incurred.
+model BedStay {
+  id          String    @id @default(cuid())
+  admissionId String
+  admission   Admission @relation(fields: [admissionId], references: [id])
+  bedId       String
+  bed         Bed       @relation(fields: [bedId], references: [id])
+  wardName    String
+  rateKobo    Int
+  from        DateTime
+  to          DateTime?
+
+  @@index([admissionId])
+}
+
+model NursingNote {
+  id          String    @id @default(cuid())
+  admissionId String
+  admission   Admission @relation(fields: [admissionId], references: [id])
+  authorId    String
+  author      User      @relation("NursingNotes", fields: [authorId], references: [id])
+  note        String
+  createdAt   DateTime  @default(now())
+
+  @@index([admissionId, createdAt])
+}
+
+enum MedicationStatus {
+  GIVEN
+  HELD
+  REFUSED
+}
+
+model MedicationAdministration {
+  id             String           @id @default(cuid())
+  admissionId    String
+  admission      Admission        @relation(fields: [admissionId], references: [id])
+  prescriptionId String
+  prescription   Prescription     @relation(fields: [prescriptionId], references: [id])
+  status         MedicationStatus
+  note           String?
+  givenById      String
+  givenBy        User             @relation("MedsGiven", fields: [givenById], references: [id])
+  givenAt        DateTime         @default(now())
+
+  @@index([admissionId, givenAt])
+}
+
+model Hmo {
+  id        String     @id @default(cuid())
+  name      String     @unique
+  code      String     @unique
+  isNhia    Boolean    @default(false)
+  isActive  Boolean    @default(true)
+  plans     HmoPlan[]
+  bills     Bill[]
+  claims    HmoClaim[]
+  createdAt DateTime   @default(now())
+}
+
+model HmoPlan {
+  id         String        @id @default(cuid())
+  hmoId      String
+  hmo        Hmo           @relation(fields: [hmoId], references: [id])
+  name       String
+  isActive   Boolean       @default(true)
+  coverage   HmoCoverage[]
+  enrolments PatientHmo[]
+  createdAt  DateTime      @default(now())
+
+  @@unique([hmoId, name])
+}
+
+// What a plan pays per category of service, and whether it needs pre-authorization
+model HmoCoverage {
+  id              String          @id @default(cuid())
+  planId          String
+  plan            HmoPlan         @relation(fields: [planId], references: [id])
+  category        ServiceCategory
+  percent         Int // 0–100
+  requiresPreauth Boolean         @default(false)
+
+  @@unique([planId, category])
+}
+
+model PatientHmo {
+  id              String   @id @default(cuid())
+  patientId       String
+  patient         Patient  @relation(fields: [patientId], references: [id])
+  planId          String
+  plan            HmoPlan  @relation(fields: [planId], references: [id])
+  enrolmentNumber String
+  validUntil      String? // "YYYY-MM-DD"
+  isActive        Boolean  @default(true)
+  createdById     String
+  createdAt       DateTime @default(now())
+
+  @@index([patientId])
+}
+
+// One submitted claim per HMO per month — the total is a snapshot at submission
+model HmoClaim {
+  id            String   @id @default(cuid())
+  hmoId         String
+  hmo           Hmo      @relation(fields: [hmoId], references: [id])
+  month         String // "YYYY-MM"
+  totalKobo     Int
+  billCount     Int
+  submittedById String
+  createdAt     DateTime @default(now())
+
+  @@unique([hmoId, month])
 }

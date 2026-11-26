@@ -48,12 +48,12 @@ export default async function OrdersPanel({ encounterId, canWrite, visitEnded, a
       where: { encounterId },
       select: {
         paidKobo: true,
-        items: { where: { status: "ACTIVE" }, orderBy: { createdAt: "asc" }, select: { sourceId: true, amountKobo: true, priceMissing: true } },
+        items: { where: { status: "ACTIVE" }, orderBy: { createdAt: "asc" }, select: { sourceId: true, amountKobo: true, hmoKobo: true, priceMissing: true } },
       },
     }),
   ]);
 
-  const paidBySource = bill ? allocatePayments(bill.items, bill.paidKobo) : new Map();
+  const paidBySource = bill ? allocatePayments(bill.items.map((i) => ({ ...i, amountKobo: i.amountKobo - i.hmoKobo })), bill.paidKobo) : new Map();
   const writable = canWrite && !visitEnded;
 
   return (

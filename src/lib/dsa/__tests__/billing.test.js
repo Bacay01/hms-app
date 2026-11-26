@@ -63,7 +63,7 @@ describe("diffBillItems", () => {
   });
 
   it("does nothing the second time (never bills twice)", () => {
-    expect(diffBillItems(saved, desired)).toEqual({ toCreate: [], toVoid: [], toReprice: [] });
+    expect(diffBillItems(saved, desired)).toEqual({ toCreate: [], toVoid: [], toReprice: [], toUpdate: [] });
   });
 
   it("voids the line when its order is cancelled", () => {

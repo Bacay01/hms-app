@@ -8,6 +8,7 @@ const PROTECTED = [
   "/patients",
   "/appointments",
   "/consultations",
+  "/inpatient",
   "/lab",
   "/pharmacy",
   "/billing",

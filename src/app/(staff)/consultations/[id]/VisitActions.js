@@ -94,7 +94,7 @@ export default function VisitActions({ encounterId, status, canWrite, outcome })
           <input name="referredTo" required placeholder="Referred to: e.g. UCH Ibadan — Cardiology" className={input} />
         )}
         {choice === "ADMITTED" && (
-          <p className="text-xs text-white/50">Ward and bed allocation comes with inpatient care (Phase 8).</p>
+          <p className="text-xs text-white/50">The ward assigns a bed on the Inpatient screen.</p>
         )}
 
         <textarea

@@ -70,6 +70,13 @@ export async function completeVisit(encounterId, prevState, formData) {
   });
   if (result.count === 0) return { error: "This visit was just updated by someone else. Reload the page." };
 
+  if (outcome === "ADMITTED") {
+    // The ward assigns a bed from the Inpatient screen
+    await prisma.admission.create({
+      data: { encounterId, patientId: encounter.patientId, admittingDoctorId: session.userId, reason: outcomeNote },
+    });
+  }
+
   await audit({
     action: "encounter.complete",
     entity: "Encounter",

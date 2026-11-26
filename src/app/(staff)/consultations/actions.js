@@ -7,6 +7,7 @@ import { audit } from "@/lib/audit";
 import { can } from "@/lib/nav";
 import { ACTIVE_STATUSES } from "@/lib/queue";
 import { parseVitalsForm } from "@/lib/vitals";
+import { isInpatient } from "@/lib/admissions";
 
 export async function recordVitals(encounterId, prevState, formData) {
   const session = await requireSession();
@@ -17,7 +18,7 @@ export async function recordVitals(encounterId, prevState, formData) {
     select: { id: true, patientId: true, status: true },
   });
   if (!encounter) return { error: "Visit not found." };
-  if (!ACTIVE_STATUSES.includes(encounter.status)) return { error: "This visit has ended." };
+  if (!ACTIVE_STATUSES.includes(encounter.status) && !(await isInpatient(encounter.id))) return { error: "This visit has ended." };
 
   const { data, error } = parseVitalsForm(formData);
   if (error) return { error };
