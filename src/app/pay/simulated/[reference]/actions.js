@@ -3,10 +3,11 @@
 import crypto from "node:crypto";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { simulatedGatewayOn } from "@/lib/paystack";
 
 // Plays the gateway's part: record the outcome, send a SIGNED webhook, redirect back — like Paystack does
 export async function simulateCharge(formData) {
-  if (process.env.PAYMENT_GATEWAY !== "simulated") throw new Error("The simulated gateway is switched off.");
+  if (!simulatedGatewayOn) throw new Error("The simulated gateway is switched off.");
 
   const reference = String(formData.get("reference") || "");
   const outcome = String(formData.get("outcome") || "");

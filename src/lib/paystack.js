@@ -6,7 +6,10 @@ import { nextReceiptNumber } from "@/lib/receipts";
 
 // PAYMENT_GATEWAY=simulated → a local stand-in for Paystack's servers (testing only).
 // Anything else → the real Paystack API. Everything below the two gateway calls is the same either way.
-const SIMULATED = process.env.PAYMENT_GATEWAY === "simulated";
+const SIMULATED =
+  process.env.PAYMENT_GATEWAY === "simulated" &&
+  (process.env.NODE_ENV !== "production" || process.env.ALLOW_SIMULATED_GATEWAY === "yes");
+export const simulatedGatewayOn = SIMULATED;
 const API = "https://api.paystack.co";
 
 export const gatewayName = SIMULATED ? "simulated gateway" : "Paystack";

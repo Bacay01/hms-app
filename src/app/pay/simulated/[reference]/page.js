@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { formatNaira } from "@/lib/money";
 import { simulateCharge } from "./actions";
+import { simulatedGatewayOn } from "@/lib/paystack";
 
 export default function SimulatedCheckoutPage({ params }) {
   return (
@@ -15,7 +16,7 @@ export default function SimulatedCheckoutPage({ params }) {
 }
 
 async function Checkout({ params }) {
-  if (process.env.PAYMENT_GATEWAY !== "simulated") notFound();
+  if (!simulatedGatewayOn) notFound();
   const { reference } = await params;
   const charge = await prisma.simulatedGatewayCharge.findUnique({ where: { reference: decodeURIComponent(reference) } });
   if (!charge) notFound();

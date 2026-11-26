@@ -8,6 +8,8 @@ import { analytesFor } from "@/lib/labCatalogue";
 import { FLAG_LABELS, evaluateResult, isCritical, parseResult } from "@/lib/labRanges";
 import { ageFrom } from "@/lib/patients";
 
+class LabError extends Error {}
+
 export async function saveResults(labRequestId, prevState, formData) {
   const session = await requirePermission("lab.results.write");
 
@@ -42,14 +44,24 @@ export async function saveResults(labRequestId, prevState, formData) {
   const comment = String(formData.get("comment") ?? "").trim().slice(0, 500) || null;
   const amending = lab.status === "RESULTED";
 
-  await prisma.$transaction([
-    prisma.labResult.deleteMany({ where: { labRequestId } }),
-    prisma.labResult.createMany({ data: rows }),
-    prisma.labRequest.update({
-      where: { id: labRequestId },
-      data: { status: "RESULTED", resultedAt: new Date(), resultedById: session.userId, resultComment: comment, returnNote: null },
-    }),
-  ]);
+  const previous = amending
+    ? await prisma.labResult.findMany({ where: { labRequestId }, select: { analyteCode: true, value: true } })
+    : [];
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      const claimed = await tx.labRequest.updateMany({
+        where: { id: labRequestId, status: { in: ["IN_PROGRESS", "RESULTED"] } },
+        data: { status: "RESULTED", resultedAt: new Date(), resultedById: session.userId, resultComment: comment, returnNote: null },
+      });
+      if (claimed.count === 0) throw new LabError("These results were just verified or changed by someone else. Reload the page.");
+      await tx.labResult.deleteMany({ where: { labRequestId } });
+      await tx.labResult.createMany({ data: rows });
+    });
+  } catch (e) {
+    if (e instanceof LabError) return { error: e.message };
+    throw e;
+  }
 
   const critical = rows.filter((r) => isCritical(r.flag));
   await audit({
@@ -57,7 +69,7 @@ export async function saveResults(labRequestId, prevState, formData) {
     entity: "LabRequest",
     entityId: labRequestId,
     userId: session.userId,
-    details: { analytes: rows.length, flagged: rows.filter((r) => r.flag).length, critical: critical.length },
+    details: { previous: previous.map((r) => `${r.analyteCode}=${r.value}`), analytes: rows.length, flagged: rows.filter((r) => r.flag).length, critical: critical.length },
   });
   if (critical.length) {
     await audit({

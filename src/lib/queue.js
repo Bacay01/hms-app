@@ -50,7 +50,7 @@ export const TRANSITIONS = {
     { to: "WITH_DOCTOR", label: "Send to doctor", permissions: ["vitals.write"] },
     { to: "LEFT", label: "Left without being seen", permissions: ["encounters.create", "vitals.write"], confirm: true },
   ],
-  WITH_DOCTOR: [{ to: "COMPLETED", label: "Complete visit", permissions: ["clinical.write"] }],
+  WITH_DOCTOR: [], // finished only from the consultation page (note + diagnosis + outcome required)
 };
 
 export function canAny(permissions = [], needed = []) {

@@ -6,9 +6,9 @@ import { isInpatient } from "@/lib/admissions";
 
 // Doctors write clinical orders, only for their own patients.
 // "Active" = the visit is still in progress OR the patient is currently admitted.
-export async function loadForClinician(encounterId, { requireActive = false } = {}) {
+export async function loadForClinician(encounterId, { requireActive = false, permission = "clinical.write" } = {}) {
   const session = await requireSession();
-  if (!can(session.permissions, "clinical.write")) return { error: "Only doctors can do this." };
+  if (!can(session.permissions, "clinical.write") || !can(session.permissions, permission)) return { error: "Your role can't do this." };
 
   const encounter = await prisma.encounter.findUnique({
     where: { id: encounterId },

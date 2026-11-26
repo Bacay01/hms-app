@@ -18,6 +18,8 @@ const DEMO_ACCOUNTS = [
 const inputClass =
   "w-full rounded-xl border border-white/15 bg-black/30 px-4 py-3 text-sm text-white placeholder:text-white/40 transition-colors focus:border-white/40 focus:outline-none";
 
+const SHOW_DEMO = process.env.NODE_ENV !== "production" || process.env.NEXT_PUBLIC_SHOW_DEMO_LOGINS === "yes";
+
 export default function LoginForm() {
   const [state, formAction, pending] = useActionState(login, {});
   const [email, setEmail] = useState("");
@@ -98,6 +100,7 @@ export default function LoginForm() {
         </button>
       </form>
 
+      {SHOW_DEMO && (
       <details className="mt-6 rounded-2xl border border-white/10 bg-black/20 p-4">
         <summary className="cursor-pointer text-xs font-medium text-white/80">
           Demo accounts — click a role to fill the form
@@ -115,6 +118,7 @@ export default function LoginForm() {
           ))}
         </div>
       </details>
+      )}
     </div>
   );
 }

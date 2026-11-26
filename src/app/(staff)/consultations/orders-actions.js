@@ -11,7 +11,7 @@ import { hasKnownAllergies } from "@/lib/patients";
 import { checkPrescription, parsePrescriptionForm, units } from "@/lib/prescribing";
 
 export async function addPrescription(encounterId, prevState, formData) {
-  const { session, encounter, error } = await loadForClinician(encounterId, { requireActive: true });
+  const { session, encounter, error } = await loadForClinician(encounterId, { requireActive: true, permission: "prescriptions.write" });
   if (error) return { error };
 
   const parsed = parsePrescriptionForm(formData);
@@ -78,7 +78,8 @@ export async function cancelPrescription(prevState, formData) {
   const { session, error } = await loadForClinician(rx.encounterId, { requireActive: true });
   if (error) return { error };
 
-  await prisma.prescription.update({ where: { id }, data: { status: "CANCELLED", cancelledAt: new Date() } });
+  const cancelled = await prisma.prescription.updateMany({ where: { id, status: "PENDING" }, data: { status: "CANCELLED", cancelledAt: new Date() } });
+  if (cancelled.count === 0) return { error: "The pharmacy has just dispensed this — it can no longer be cancelled." };
   await audit({
     action: "prescription.cancel",
     entity: "Encounter",
@@ -93,7 +94,7 @@ export async function cancelPrescription(prevState, formData) {
 }
 
 export async function requestLab(encounterId, prevState, formData) {
-  const { session, encounter, error } = await loadForClinician(encounterId, { requireActive: true });
+  const { session, encounter, error } = await loadForClinician(encounterId, { requireActive: true, permission: "lab.requests.create" });
   if (error) return { error };
 
   const test = LAB_TESTS.find((t) => t.code === String(formData.get("testCode") || ""));
@@ -138,7 +139,8 @@ export async function cancelLab(prevState, formData) {
   const { session, error } = await loadForClinician(lab.encounterId, { requireActive: true });
   if (error) return { error };
 
-  await prisma.labRequest.update({ where: { id }, data: { status: "CANCELLED", cancelledAt: new Date() } });
+  const cancelled = await prisma.labRequest.updateMany({ where: { id, status: "REQUESTED" }, data: { status: "CANCELLED", cancelledAt: new Date() } });
+  if (cancelled.count === 0) return { error: "The lab has just taken the sample — ask the lab to cancel it." };
   await audit({
     action: "lab.cancel",
     entity: "Encounter",

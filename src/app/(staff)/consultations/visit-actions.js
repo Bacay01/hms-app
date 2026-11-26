@@ -58,24 +58,29 @@ export async function completeVisit(encounterId, prevState, formData) {
   if (notes === 0) return { error: "Write a clinical note before completing the visit." };
   if (diagnoses === 0) return { error: "Add at least one diagnosis (provisional is fine) before completing the visit." };
 
-  const result = await prisma.encounter.updateMany({
-    where: { id: encounterId, status: "WITH_DOCTOR" },
-    data: {
-      status: "COMPLETED",
-      endedAt: new Date(),
-      outcome,
-      outcomeNote,
-      referredTo: outcome === "REFERRED" ? referredTo : null,
-    },
-  });
-  if (result.count === 0) return { error: "This visit was just updated by someone else. Reload the page." };
-
-  if (outcome === "ADMITTED") {
-    // The ward assigns a bed from the Inpatient screen
-    await prisma.admission.create({
-      data: { encounterId, patientId: encounter.patientId, admittingDoctorId: session.userId, reason: outcomeNote },
+  let done = false;
+  await prisma.$transaction(async (tx) => {
+    const result = await tx.encounter.updateMany({
+      where: { id: encounterId, status: "WITH_DOCTOR" },
+      data: {
+        status: "COMPLETED",
+        endedAt: new Date(),
+        outcome,
+        outcomeNote,
+        referredTo: outcome === "REFERRED" ? referredTo : null,
+      },
     });
-  }
+    if (result.count === 0) return;
+    await tx.appointment.updateMany({ where: { encounterId, status: "CHECKED_IN" }, data: { status: "COMPLETED" } });
+    if (outcome === "ADMITTED") {
+      // The ward assigns a bed from the Inpatient screen
+      await tx.admission.create({
+        data: { encounterId, patientId: encounter.patientId, admittingDoctorId: session.userId, reason: outcomeNote },
+      });
+    }
+    done = true;
+  });
+  if (!done) return { error: "This visit was just updated by someone else. Reload the page." };
 
   await audit({
     action: "encounter.complete",
