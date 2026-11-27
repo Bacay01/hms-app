@@ -5,6 +5,7 @@ import HeroSlider from "@/components/landing/HeroSlider";
 import RotatingBadge from "@/components/landing/RotatingBadge";
 import AvatarStack from "@/components/landing/AvatarStack";
 import { SITE } from "@/lib/site";
+import HomeSections from "@/components/landing/HomeSections";
 
 export default function Home() {
   return (
@@ -91,6 +92,8 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      <HomeSections />
     </main>
   );
 }

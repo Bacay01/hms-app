@@ -12,7 +12,7 @@ export const metadata = {
   description: "Request an appointment and our front desk will call you to confirm a time.",
 };
 
-export default function BookPage() {
+export default function BookPage({ searchParams }) {
   return (
     <main className="relative isolate flex min-h-dvh flex-col bg-black">
       <Image src="/images/hero.jpg" alt="" fill priority sizes="100vw" className="-z-20 object-cover object-[65%_center]" />
@@ -47,7 +47,7 @@ export default function BookPage() {
 
         <div className="w-full max-w-md">
           <Suspense fallback={<div className="h-[640px] rounded-3xl border border-white/15 bg-white/10" />}>
-            <Form />
+            <Form searchParams={searchParams} />
           </Suspense>
         </div>
       </div>
@@ -55,12 +55,22 @@ export default function BookPage() {
   );
 }
 
-async function Form() {
+async function Form({ searchParams }) {
+  const { department = "" } = await searchParams;
   const departments = await prisma.department.findMany({
     where: { isActive: true },
     orderBy: { name: "asc" },
     select: { id: true, name: true },
   });
   const today = localDate();
-  return <BookingForm departments={departments} minDate={today} maxDate={shiftDate(today, MAX_DAYS_AHEAD)} />;
+  // From a "Book with …" button on the homepage: preselect that department if it exists
+  const preselect = departments.some((d) => d.id === department) ? department : "";
+  return (
+    <BookingForm
+      departments={departments}
+      minDate={today}
+      maxDate={shiftDate(today, MAX_DAYS_AHEAD)}
+      defaultDepartmentId={preselect}
+    />
+  );
 }

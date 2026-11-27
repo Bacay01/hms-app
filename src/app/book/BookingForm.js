@@ -13,7 +13,7 @@ function FieldError({ message, id }) {
   return message ? <p id={id} className="mt-1 text-xs text-red-300">{message}</p> : null;
 }
 
-export default function BookingForm({ departments, minDate, maxDate }) {
+export default function BookingForm({ departments, minDate, maxDate, defaultDepartmentId = "" }) {
   const [state, formAction, pending] = useActionState(requestAppointment, {});
   const v = state.values ?? {};
   const e = state.errors ?? {};
@@ -81,7 +81,7 @@ export default function BookingForm({ departments, minDate, maxDate }) {
 
         <div>
           <label htmlFor="departmentId" className={labelClass}>Department <span className="text-white/45">(optional)</span></label>
-          <select id="departmentId" name="departmentId" defaultValue={v.departmentId ?? ""}
+          <select id="departmentId" name="departmentId" defaultValue={v.departmentId ?? defaultDepartmentId}
             aria-describedby="departmentId-err" className={inputClass}>
             <option value="">Not sure — help me choose</option>
             {departments.map((d) => (

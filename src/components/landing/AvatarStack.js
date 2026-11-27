@@ -20,7 +20,7 @@ export default function AvatarStack() {
           </span>
         ))}
       </div>
-      <span className="whitespace-nowrap text-xs text-white/75">10K+ patients cared for</span>
+      <span className="whitespace-nowrap text-xs text-white/75">Every department, one patient record</span>
     </div>
   );
 }
