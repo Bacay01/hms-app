@@ -947,3 +947,31 @@ model HmoClaim {
 
   @@unique([hmoId, month])
 }
+
+// ─────────────────────────────
+// Public "request an appointment" form (/book). Reception calls back and books the real Appointment.
+enum AppointmentRequestStatus {
+  NEW
+  BOOKED
+  DECLINED
+}
+
+model AppointmentRequest {
+  id            String                   @id @default(cuid())
+  fullName      String
+  phone         String // +234… format
+  departmentId  String?
+  preferredDate DateTime                 @db.Date
+  preferredTime String // MORNING | AFTERNOON
+  reason        String?
+  consentAt     DateTime // NDPA: when they agreed to be contacted
+  status        AppointmentRequestStatus @default(NEW)
+  staffNote     String?
+  handledById   String?
+  handledAt     DateTime?
+  ipAddress     String?
+  createdAt     DateTime                 @default(now())
+
+  @@index([status, createdAt])
+  @@index([phone, status])
+}
